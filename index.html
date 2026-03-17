@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project Task Dashboard</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+    body { background: #f0f2f5; min-height: 100vh; padding: 16px; }
+
+    /* LOGIN */
+    .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-card { background: white; border-radius: 16px; padding: 28px; width: 100%; max-width: 380px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
+    .login-card h2 { color: #1a73e8; margin-bottom: 4px; font-size: 22px; }
+    .login-card .sub { color: #888; font-size: 13px; margin-bottom: 22px; }
+
+    /* DASHBOARD */
+    .dashboard { display: none; max-width: 900px; margin: 0 auto; }
+    .dash-header { background: white; border-radius: 14px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .dash-header h2 { color: #1a73e8; font-size: 17px; }
+    .user-info { font-size: 12px; color: #555; margin-top: 3px; }
+    .team-badge { display: inline-block; background: #e8f0fe; color: #1a73e8; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-left: 8px; }
+    .admin-badge { background: #fce4ec; color: #c62828; }
+    .logout-btn { background: none; border: 1.5px solid #ddd; color: #888; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+    .logout-btn:hover { border-color: #d32f2f; color: #d32f2f; }
+
+    /* TABS (admin only) */
+    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab { padding: 8px 18px; border-radius: 8px; border: 1.5px solid #ddd; background: white; cursor: pointer; font-size: 13px; font-weight: 600; color: #555; }
+    .tab.active { background: #1a73e8; color: white; border-color: #1a73e8; }
+
+    .card { background: white; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+    .card h3 { color: #333; font-size: 15px; margin-bottom: 14px; }
+
+    .my-task-box { background: #f8f9ff; border: 1.5px solid #d0d8ff; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+    .tl { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .tv { font-size: 15px; font-weight: 700; color: #1a73e8; }
+
+    label { font-size: 13px; color: #555; font-weight: 600; display: block; margin-bottom: 5px; }
+    input, select, textarea { width: 100%; padding: 11px 14px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 13px; outline: none; }
+    input:focus, select:focus, textarea:focus { border-color: #1a73e8; }
+    textarea { resize: vertical; min-height: 75px; }
+    button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+    button:disabled { background: #aaa; }
+    .refresh-btn { background: #e8f0fe; color: #1a73e8; font-size: 13px; padding: 8px; margin-bottom: 13px; }
+
+    /* TABLE */
+    .overflow { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9ff; color: #1a73e8; font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 2px solid #e8eeff; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    .my-row td { background: #fffde7 !important; font-weight: 600; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .b-Completed { background: #e8f5e9; color: #2e7d32; }
+    .b-Working { background: #fff8e1; color: #f57f17; }
+    .b-Stuck { background: #fce4ec; color: #c62828; }
+    .b-Not { background: #f5f5f5; color: #757575; }
+    .b-empty { background: #f5f5f5; color: #bbb; }
+
+    /* STATS (admin) */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .stat-box { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); text-align: center; }
+    .stat-num { font-size: 28px; font-weight: 800; color: #1a73e8; }
+    .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
+    .stat-box.green .stat-num { color: #2e7d32; }
+    .stat-box.red .stat-num { color: #c62828; }
+    .stat-box.orange .stat-num { color: #f57f17; }
+
+    .msg { padding: 11px 14px; border-radius: 8px; margin-bottom: 13px; font-size: 13px; font-weight: 500; }
+    .error { background: #fff0f0; color: #d32f2f; border: 1px solid #ffcdd2; }
+    .success { background: #f0fff4; color: #2e7d32; border: 1px solid #c8e6c9; }
+    .warning { background: #fffde7; color: #f57f17; border: 1px solid #fff176; }
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .empty { text-align: center; padding: 28px; color: #aaa; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h2>📋 Project Task Dashboard</h2>
+    <p class="sub">Login with your email and team password</p>
+    <div id="loginMsg"></div>
+    <label>Your Email</label>
+    <input type="email" id="loginEmail" placeholder="yourname@gmail.com" />
+    <label>Password</label>
+    <input type="password" id="loginPass" placeholder="Enter your password" />
+    <button id="loginBtn" onclick="doLogin()">Login →</button>
+  </div>
+</div>
+
+<!-- MEMBER DASHBOARD -->
+<div class="dashboard" id="memberDash">
+  <div class="dash-header">
+    <div>
+      <h2>📋 Project Task Dashboard
+        <span class="team-badge" id="memberTeamBadge"></span>
+      </h2>
+      <div class="user-info">👤 <span id="memberName"></span> · <span id="memberEmail"></span></div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Logout</button>
+  </div>
+
+  <div class="card">
+    <h3>✏️ My Update</h3>
+    <div id="submitMsg"></div>
+    <div class="my-task-box">
+      <div class="tl">My Task Today</div>
+      <div class="tv" id="myTask">Loading...</div>
+    </div>
+    <label>Status *</label>
+    <select id="statusInput">
+      <option value="">-- Select Status --</option>
+      <option>Completed</option>
+      <option>Working on it</option>
+      <option>Stuck</option>
+      <option>Not Started</option>
+    </select>
+    <label>End of Day Summary *</label>
+    <textarea id="summaryInput" placeholder="What did you do today?"></textarea>
+    <button id="submitBtn" onclick="doSubmit()">Submit Update ✓</button>
+  </div>
+
+  <div class="card">
+    <h3>👥 My Team — Today's Status</h3>
+    <button class="refresh-btn" onclick="loadMemberSheet()">🔄 Refresh</button>
+    <div class="overflow"><div id="memberTableWrap"><div class="empty">Loading...</div></div></div>
+  </div>
+</div>
+
+<!-- ADMIN DASHBOARD -->
+<div class="dashboard" id="adminDash">
+  <div class="dash-header">
+    <div>
+      <h2>📋 Admin Dashboard
+        <span class="team-badge admin-badge">ADMIN</span>
+      </h2>
+      <div class="user-info">👤 <span id="adminName"></span> · <span id="adminEmail"></span></div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Logout</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats" id="adminStats"></div>
+
+  <!-- Team Tabs -->
+  <div class="tabs" id="teamTabs"></div>
+
+  <!-- Team Table -->
+  <div class="card">
+    <h3>📊 <span id="activeTeamName"></span> — Today's Status</h3>
+    <button class="refresh-btn" onclick="loadAdminSheet()">🔄 Refresh All</button>
+    <div class="overflow"><div id="adminTableWrap"><div class="empty">Loading...</div></div></div>
+  </div>
+</div>
+
+<script>
+  var API_URL = "https://script.google.com/macros/s/AKfycby4jJ74rsdpXpA86EE_Td1LnF0ALDwd8TOKR6V1rvs3USxhQhB913FYkl75cc1QykI1/exec"; // ← Replace this
+
+  var currentEmail = "";
+  var currentPassword = "";
+  var currentName = "";
+  var currentRole = "";
+  var currentTeam = "";
+  var allTeamsData = {};
+  var activeTab = "";
+
+  function showMsg(id, text, type) {
+    document.getElementById(id).innerHTML = text ? '<div class="msg ' + type + '">' + text + '</div>' : '';
+  }
+
+  function setBtn(id, loading, text) {
+    var b = document.getElementById(id);
+    b.disabled = loading;
+    b.innerHTML = loading ? '<span class="spinner"></span>Please wait...' : text;
+  }
+
+  async function callAPI(body) {
+    var res = await fetch(API_URL, { method: "POST", body: JSON.stringify(body) });
+    return await res.json();
+  }
+
+  // ---- LOGIN ----
+  async function doLogin() {
+    var email = document.getElementById("loginEmail").value.trim();
+    var pass = document.getElementById("loginPass").value.trim();
+    if (!email || !pass) { showMsg("loginMsg", "Please enter email and password.", "error"); return; }
+
+    setBtn("loginBtn", true, "Login →");
+    showMsg("loginMsg", "", "");
+
+    try {
+      var result = await callAPI({ action: "login", email: email, password: pass });
+      if (result.error) {
+        showMsg("loginMsg", result.error, "error");
+      } else {
+        currentEmail = email.toLowerCase().trim();
+        currentPassword = pass;
+        currentName = result.name;
+        currentRole = result.role;
+        currentTeam = result.team || "";
+        document.getElementById("loginWrap").style.display = "none";
+
+        if (currentRole === "admin") {
+          document.getElementById("adminName").innerText = currentName;
+          document.getElementById("adminEmail").innerText = currentEmail;
+          document.getElementById("adminDash").style.display = "block";
+          loadAdminSheet();
+        } else {
+          document.getElementById("memberName").innerText = currentName;
+          document.getElementById("memberEmail").innerText = currentEmail;
+          document.getElementById("memberTeamBadge").innerText = currentTeam;
+          document.getElementById("memberDash").style.display = "block";
+          loadMemberSheet();
+        }
+      }
+    } catch(err) {
+      showMsg("loginMsg", "❌ Could not connect. Try again.", "error");
+    }
+    setBtn("loginBtn", false, "Login →");
+  }
+
+  function doLogout() {
+    currentEmail = ""; currentPassword = ""; currentName = "";
+    currentRole = ""; currentTeam = ""; allTeamsData = {};
+    document.getElementById("loginEmail").value = "";
+    document.getElementById("loginPass").value = "";
+    document.getElementById("memberDash").style.display = "none";
+    document.getElementById("adminDash").style.display = "none";
+    document.getElementById("loginWrap").style.display = "flex";
+  }
+
+  // ---- MEMBER ----
+  async function loadMemberSheet() {
+    document.getElementById("memberTableWrap").innerHTML = '<div class="empty">Loading...</div>';
+    document.getElementById("myTask").innerText = "Loading...";
+
+    try {
+      var result = await callAPI({ action: "getSheet", email: currentEmail, password: currentPassword });
+      if (result.error) {
+        document.getElementById("memberTableWrap").innerHTML = '<div class="empty">' + result.error + '</div>';
+        return;
+      }
+
+      var rows = result.rows;
+      var myRow = rows.find(function(r) { return r.name === currentName; });
+      document.getElementById("myTask").innerText = myRow ? (myRow.task || "No task assigned") : "No task assigned today";
+      if (myRow && myRow.status) document.getElementById("statusInput").value = myRow.status;
+      if (myRow && myRow.summary) document.getElementById("summaryInput").value = myRow.summary;
+
+      document.getElementById("memberTableWrap").innerHTML = buildTable(rows, currentName);
+    } catch(err) {
+      document.getElementById("memberTableWrap").innerHTML = '<div class="empty">❌ Connection error.</div>';
+    }
+  }
+
+  async function doSubmit() {
+    var status = document.getElementById("statusInput").value;
+    var summary = document.getElementById("summaryInput").value.trim();
+    if (!status) { showMsg("submitMsg", "Please select a status.", "error"); return; }
+    if (!summary) { showMsg("submitMsg", "Please write your summary.", "error"); return; }
+
+    setBtn("submitBtn", true, "Submit Update ✓");
+    showMsg("submitMsg", "", "");
+
+    try {
+      var result = await callAPI({ action: "submit", email: currentEmail, password: currentPassword, status: status, summary: summary });
+      if (result.error) {
+        showMsg("submitMsg", result.error, result.error.includes("⚠️") ? "warning" : "error");
+      } else {
+        showMsg("submitMsg", result.success, "success");
+        loadMemberSheet();
+      }
+    } catch(err) {
+      showMsg("submitMsg", "❌ Connection error. Try again.", "error");
+    }
+    setBtn("submitBtn", false, "Submit Update ✓");
+  }
+
+  // ---- ADMIN ----
+  async function loadAdminSheet() {
+    document.getElementById("adminTableWrap").innerHTML = '<div class="empty">Loading...</div>';
+    document.getElementById("adminStats").innerHTML = '';
+
+    try {
+      var result = await callAPI({ action: "adminGetAll", email: currentEmail, password: currentPassword });
+      if (result.error) {
+        document.getElementById("adminTableWrap").innerHTML = '<div class="empty">' + result.error + '</div>';
+        return;
+      }
+
+      allTeamsData = result.allTeams;
+      var teams = Object.keys(allTeamsData);
+
+      // Build stats
+      var totalMembers = 0, totalDone = 0, totalStuck = 0, totalPending = 0;
+      teams.forEach(function(team) {
+        allTeamsData[team].forEach(function(r) {
+          totalMembers++;
+          if (r.status === "Completed") totalDone++;
+          else if (r.status === "Stuck") totalStuck++;
+          else if (!r.status) totalPending++;
+        });
+      });
+
+      document.getElementById("adminStats").innerHTML =
+        '<div class="stat-box"><div class="stat-num">' + totalMembers + '</div><div class="stat-label">Total Members</div></div>' +
+        '<div class="stat-box green"><div class="stat-num">' + totalDone + '</div><div class="stat-label">Completed</div></div>' +
+        '<div class="stat-box red"><div class="stat-num">' + totalStuck + '</div><div class="stat-label">Stuck</div></div>' +
+        '<div class="stat-box orange"><div class="stat-num">' + totalPending + '</div><div class="stat-label">Pending</div></div>';
+
+      // Build tabs
+      var tabsHtml = '';
+      teams.forEach(function(team, i) {
+        var isActive = (activeTab === team) || (i === 0 && !activeTab);
+        if (isActive) activeTab = team;
+        tabsHtml += '<div class="tab ' + (isActive ? 'active' : '') + '" onclick="switchTab(\'' + team + '\')">' + team + ' (' + allTeamsData[team].length + ')</div>';
+      });
+      document.getElementById("teamTabs").innerHTML = tabsHtml;
+
+      showTeamTable(activeTab);
+
+    } catch(err) {
+      document.getElementById("adminTableWrap").innerHTML = '<div class="empty">❌ Connection error.</div>';
+    }
+  }
+
+  function switchTab(team) {
+    activeTab = team;
+    // Update tab styles
+    document.querySelectorAll(".tab").forEach(function(t) {
+      t.classList.toggle("active", t.innerText.startsWith(team));
+    });
+    showTeamTable(team);
+  }
+
+  function showTeamTable(team) {
+    document.getElementById("activeTeamName").innerText = team;
+    var rows = allTeamsData[team] || [];
+    document.getElementById("adminTableWrap").innerHTML = buildTable(rows, "");
+  }
+
+  // ---- SHARED TABLE BUILDER ----
+  function buildTable(rows, highlightName) {
+    if (rows.length === 0) return '<div class="empty">No tasks assigned today.</div>';
+    var html = '<table><thead><tr><th>Name</th><th>Task</th><th>Status</th><th>Summary</th></tr></thead><tbody>';
+    rows.forEach(function(r) {
+      var isMe = r.name === highlightName;
+      var sc = r.status ? "b-" + r.status.split(" ")[0] : "b-empty";
+      html += '<tr class="' + (isMe ? "my-row" : "") + '">';
+      html += '<td>' + r.name + (isMe ? ' <span style="font-size:10px;color:#1a73e8">(you)</span>' : '') + '</td>';
+      html += '<td>' + (r.task || '—') + '</td>';
+      html += '<td><span class="badge ' + sc + '">' + (r.status || '—') + '</span></td>';
+      html += '<td>' + (r.summary || '—') + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+  }
+
+  document.addEventListener("keypress", function(e) {
+    if (e.key === "Enter" && document.getElementById("loginWrap").style.display !== "none") doLogin();
+  });
+</script>
+</body>
+</html>
