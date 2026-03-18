@@ -116,24 +116,34 @@
     <button class="logout-btn" onclick="doLogout()">Logout</button>
   </div>
   <div class="card">
-    <h3>✏️ My Update</h3>
-    <div id="submitMsg"></div>
-    <div class="my-task-box">
-      <div class="tl">My Task Today</div>
-      <div class="tv" id="myTask">Loading...</div>
-    </div>
-    <label>Status *</label>
-    <select id="statusInput">
-      <option value="">-- Select Status --</option>
-      <option>Completed</option>
-      <option>Working on it</option>
-      <option>Stuck</option>
+  <h3>✏️ My Update</h3>
+  <div id="submitMsg"></div>
+
+  <!-- Task selector — shown when multiple tasks -->
+  <div id="taskSelectorWrap" style="display:none; margin-bottom:14px;">
+    <label>Select Task to Update *</label>
+    <select id="taskSelector" onchange="onTaskSelect()">
+      <option value="">-- Select a task --</option>
     </select>
-    <label>End of Day Summary *</label>
-    <textarea id="summaryInput" placeholder="What did you do today?"></textarea>
-    <button id="submitBtn" onclick="doSubmit()">Submit Update ✓</button>
   </div>
-  <div class="card">
+
+  <div class="my-task-box">
+    <div class="tl">My Task Today</div>
+    <div class="tv" id="myTask">Loading...</div>
+  </div>
+
+  <label>Status *</label>
+  <select id="statusInput">
+    <option value="">-- Select Status --</option>
+    <option>Completed</option>
+    <option>Working on it</option>
+    <option>Stuck</option>
+    <option>Not Started</option>
+  </select>
+  <label>End of Day Summary *</label>
+  <textarea id="summaryInput" placeholder="What did you do today?"></textarea>
+  <button id="submitBtn" onclick="doSubmit()">Submit Update ✓</button>
+</div>
     <h3>👥 My Team — Today</h3>
     <button class="refresh-btn" onclick="loadMemberSheet()">🔄 Refresh</button>
     <div class="overflow"><div id="memberTableWrap"><div class="empty">Loading...</div></div></div>
@@ -289,6 +299,14 @@ async function doLogin() {
       currentName = result.name;
       currentRole = result.role;
       currentTeam = result.team || "";
+      // Save session to localStorage
+      localStorage.setItem("session", JSON.stringify({
+        email: currentEmail,
+        password: currentPassword,
+        name: currentName,
+        role: currentRole,
+        team: currentTeam
+      }));
       document.getElementById("loginWrap").style.display = "none";
       if (currentRole === "admin") {
         document.getElementById("adminName").innerText = currentName;
@@ -308,6 +326,7 @@ async function doLogin() {
 }
 
 function doLogout() {
+  localStorage.removeItem("session");
   currentEmail = ""; currentPassword = ""; currentName = ""; currentRole = ""; currentTeam = "";
   document.getElementById("loginEmail").value = "";
   document.getElementById("loginPass").value = "";
@@ -327,30 +346,62 @@ function switchPage(page, el) {
 }
 
 // ---- MEMBER ----
+var myTasks = []; // stores all tasks for current member today
+var selectedRowIndex = null;
+
 async function loadMemberSheet() {
   document.getElementById("memberTableWrap").innerHTML = '<div class="empty">Loading...</div>';
   document.getElementById("myTask").innerText = "Loading...";
   try {
     var result = await callAPI({ action: "getSheet", email: currentEmail, password: currentPassword });
-    if (result.error) { document.getElementById("memberTableWrap").innerHTML = '<div class="empty">' + result.error + '</div>'; return; }
-    var myRow = result.rows.find(function(r) { return r.name === currentName; });
-    document.getElementById("myTask").innerText = myRow ? (myRow.task || "No task assigned") : "No task assigned today";
-    if (myRow && myRow.status) document.getElementById("statusInput").value = myRow.status;
-    if (myRow && myRow.summary) document.getElementById("summaryInput").value = myRow.summary;
+    if (result.error) {
+      document.getElementById("memberTableWrap").innerHTML = '<div class="empty">' + result.error + '</div>';
+      return;
+    }
+
+    // Find all rows belonging to current member
+    myTasks = result.rows.filter(function(r) { return r.name === currentName; });
+
+    if (myTasks.length === 0) {
+      document.getElementById("myTask").innerText = "No task assigned today";
+      document.getElementById("taskSelectorWrap").style.display = "none";
+    } else if (myTasks.length === 1) {
+      // Single task — show directly
+      document.getElementById("taskSelectorWrap").style.display = "none";
+      document.getElementById("myTask").innerText = myTasks[0].task || "No task assigned";
+      selectedRowIndex = myTasks[0].rowIndex;
+      if (myTasks[0].status) document.getElementById("statusInput").value = myTasks[0].status;
+      if (myTasks[0].summary) document.getElementById("summaryInput").value = myTasks[0].summary;
+    } else {
+      // Multiple tasks — show dropdown
+      document.getElementById("taskSelectorWrap").style.display = "block";
+      var selector = document.getElementById("taskSelector");
+      selector.innerHTML = '<option value="">-- Select a task --</option>';
+      myTasks.forEach(function(t, idx) {
+        var opt = document.createElement("option");
+        opt.value = idx;
+        opt.text = "Task " + (idx + 1) + ": " + (t.task || "No task");
+        selector.appendChild(opt);
+      });
+      // Show first task by default
+      selector.value = "0";
+      onTaskSelect();
+    }
+
     document.getElementById("memberTableWrap").innerHTML = buildTable(result.rows, currentName, false, "");
 
-    // ---- BROWSER NOTIFICATION ----
-    if (myRow && myRow.task) {
+    // Browser notification
+    if (myTasks.length > 0 && myTasks[0].task) {
       if (Notification.permission === "granted") {
         new Notification("📋 Your Task Today", {
-          body: myRow.task,
+          body: myTasks.length > 1 ? "You have " + myTasks.length + " tasks today!" : myTasks[0].task,
           icon: "https://www.gstatic.com/images/branding/product/1x/sheets_2020q4_48dp.png"
         });
       } else if (Notification.permission !== "denied") {
         Notification.requestPermission().then(function(perm) {
           if (perm === "granted") {
             new Notification("📋 Your Task Today", {
-              body: myRow.task,
+              body: myTasks.length > 1 ? "You have " + myTasks.length + " tasks today!" : myTasks[0].task,
               icon: "https://www.gstatic.com/images/branding/product/1x/sheets_2020q4_48dp.png"
             });
           }
@@ -358,7 +409,20 @@ async function loadMemberSheet() {
       }
     }
 
-  } catch(err) { document.getElementById("memberTableWrap").innerHTML = '<div class="empty">❌ Connection error.</div>'; }
+  } catch(err) {
+    document.getElementById("memberTableWrap").innerHTML = '<div class="empty">❌ Connection error.</div>';
+  }
+}
+
+function onTaskSelect() {
+  var idx = document.getElementById("taskSelector").value;
+  if (idx === "") return;
+  var task = myTasks[parseInt(idx)];
+  document.getElementById("myTask").innerText = task.task || "No task assigned";
+  selectedRowIndex = task.rowIndex;
+  // Load existing status/summary for this task
+  document.getElementById("statusInput").value = task.status || "";
+  document.getElementById("summaryInput").value = task.summary || "";
 }
 
 async function doSubmit() {
@@ -366,9 +430,18 @@ async function doSubmit() {
   var summary = document.getElementById("summaryInput").value.trim();
   if (!status) { showMsg("submitMsg", "Please select a status.", "error"); return; }
   if (!summary) { showMsg("submitMsg", "Please write your summary.", "error"); return; }
+  if (!selectedRowIndex) { showMsg("submitMsg", "Please select a task first.", "error"); return; }
+
   setBtn("submitBtn", true, "Submit Update ✓");
   try {
-    var result = await callAPI({ action: "submit", email: currentEmail, password: currentPassword, status: status, summary: summary });
+    var result = await callAPI({
+      action: "submit",
+      email: currentEmail,
+      password: currentPassword,
+      status: status,
+      summary: summary,
+      rowIndex: selectedRowIndex  // ← send exact row to update
+    });
     if (result.error) showMsg("submitMsg", result.error, result.error.includes("⚠️") ? "warning" : "error");
     else { showMsg("submitMsg", result.success, "success"); loadMemberSheet(); }
   } catch(err) { showMsg("submitMsg", "❌ Connection error.", "error"); }
@@ -656,6 +729,37 @@ function buildTable(rows, highlightName, showNotify, teamName) {
 document.addEventListener("keypress", function(e) {
   if (e.key === "Enter" && document.getElementById("loginWrap").style.display !== "none") doLogin();
 });
+
+// Auto-restore session on page load/refresh
+(function restoreSession() {
+  var saved = localStorage.getItem("session");
+  if (!saved) return;
+  try {
+    var s = JSON.parse(saved);
+    if (!s.email || !s.password) return;
+    currentEmail = s.email;
+    currentPassword = s.password;
+    currentName = s.name;
+    currentRole = s.role;
+    currentTeam = s.team || "";
+    document.getElementById("loginWrap").style.display = "none";
+    if (currentRole === "admin") {
+      document.getElementById("adminName").innerText = currentName;
+      document.getElementById("adminEmail").innerText = currentEmail;
+      document.getElementById("adminDash").style.display = "block";
+      loadDaily();
+    } else {
+      document.getElementById("memberName").innerText = currentName;
+      document.getElementById("memberEmail").innerText = currentEmail;
+      document.getElementById("memberTeamBadge").innerText = currentTeam;
+      document.getElementById("memberDash").style.display = "block";
+      loadMemberSheet();
+    }
+  } catch(e) {
+    localStorage.removeItem("session");
+  }
+})();
 </script>
 </body>
 </html>
+
