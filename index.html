@@ -83,11 +83,17 @@
     .error { background: #fff0f0; color: #d32f2f; border: 1px solid #ffcdd2; }
     .success { background: #f0fff4; color: #2e7d32; border: 1px solid #c8e6c9; }
     .warning { background: #fffde7; color: #f57f17; border: 1px solid #fff176; }
+    .info { background: #e8f0fe; color: #1a73e8; border: 1px solid #c5d8fb; }
     .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+    .spinner-blue { border-color: #1a73e8; border-top-color: transparent; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .empty { text-align: center; padding: 28px; color: #aaa; font-size: 14px; }
     .section-title { font-size: 13px; font-weight: 700; color: #1a73e8; margin: 16px 0 10px; text-transform: uppercase; letter-spacing: 0.5px; }
     .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .retry-btn { background: #1a73e8; color: white; border: none; padding: 8px 20px; border-radius: 8px; font-size: 13px; cursor: pointer; margin-top: 10px; width: auto; }
+    .loading-dots { display: inline-block; }
+    .loading-dots::after { content: ''; animation: dots 1.5s infinite; }
+    @keyframes dots { 0%,20%{content:'.'} 40%{content:'..'} 60%,100%{content:'...'} }
   </style>
 </head>
 <body>
@@ -116,37 +122,32 @@
     <button class="logout-btn" onclick="doLogout()">Logout</button>
   </div>
   <div class="card">
-  <h3>✏️ My Update</h3>
-  <div id="submitMsg"></div>
-
-  <!-- Task selector — shown when multiple tasks -->
-  <div id="taskSelectorWrap" style="display:none; margin-bottom:14px;">
-    <label>Select Task to Update *</label>
-    <select id="taskSelector" onchange="onTaskSelect()">
-      <option value="">-- Select a task --</option>
+    <h3>✏️ My Update</h3>
+    <div id="submitMsg"></div>
+    <div id="taskSelectorWrap" style="display:none; margin-bottom:14px;">
+      <label>Select Task to Update *</label>
+      <select id="taskSelector" onchange="onTaskSelect()"></select>
+    </div>
+    <div class="my-task-box">
+      <div class="tl">My Task Today</div>
+      <div class="tv" id="myTask">Loading...</div>
+    </div>
+    <label>Status *</label>
+    <select id="statusInput">
+      <option value="">-- Select Status --</option>
+      <option>Completed</option>
+      <option>Working on it</option>
+      <option>Stuck</option>
+      <option>Not Started</option>
     </select>
+    <label>End of Day Summary *</label>
+    <textarea id="summaryInput" placeholder="What did you do today?"></textarea>
+    <button id="submitBtn" onclick="doSubmit()">Submit Update ✓</button>
   </div>
-
-  <div class="my-task-box">
-    <div class="tl">My Task Today</div>
-    <div class="tv" id="myTask">Loading...</div>
-  </div>
-
-  <label>Status *</label>
-  <select id="statusInput">
-    <option value="">-- Select Status --</option>
-    <option>Completed</option>
-    <option>Working on it</option>
-    <option>Stuck</option>
-    <option>Not Started</option>
-  </select>
-  <label>End of Day Summary *</label>
-  <textarea id="summaryInput" placeholder="What did you do today?"></textarea>
-  <button id="submitBtn" onclick="doSubmit()">Submit Update ✓</button>
-</div>
+  <div class="card">
     <h3>👥 My Team — Today</h3>
-    <button class="refresh-btn" onclick="loadMemberSheet()">🔄 Refresh</button>
-    <div class="overflow"><div id="memberTableWrap"><div class="empty">Loading...</div></div></div>
+    <button class="refresh-btn" onclick="loadTeamTable()">🔄 Refresh</button>
+    <div id="memberTableWrap"><div class="empty">Loading...</div></div>
   </div>
 </div>
 
@@ -159,33 +160,23 @@
     </div>
     <button class="logout-btn" onclick="doLogout()">Logout</button>
   </div>
-
   <div class="nav-tabs">
     <div class="nav-tab active" onclick="switchPage('daily', this)">📅 Daily</div>
     <div class="nav-tab" onclick="switchPage('weekly', this)">📆 Weekly</div>
     <div class="nav-tab" onclick="switchPage('monthly', this)">📊 Monthly</div>
   </div>
 
-  <!-- ======= DAILY PAGE ======= -->
+  <!-- DAILY PAGE -->
   <div class="page active" id="page-daily">
     <div class="stats" id="dailyStats"></div>
-
     <div class="card">
       <h3>🟢 Member Attendance — <span id="todayDate"></span></h3>
       <div id="attendanceWrap"><div class="empty">Loading...</div></div>
     </div>
-
     <div class="chart-grid">
-      <div class="chart-box">
-        <h4>📊 Overall Status Distribution</h4>
-        <div class="chart-wrap"><canvas id="dailyDonut"></canvas></div>
-      </div>
-      <div class="chart-box">
-        <h4>📊 Status by Team</h4>
-        <div class="chart-wrap"><canvas id="dailyBar"></canvas></div>
-      </div>
+      <div class="chart-box"><h4>📊 Overall Status Distribution</h4><div class="chart-wrap"><canvas id="dailyDonut"></canvas></div></div>
+      <div class="chart-box"><h4>📊 Status by Team</h4><div class="chart-wrap"><canvas id="dailyBar"></canvas></div></div>
     </div>
-
     <div class="card">
       <h3>📋 Team Details</h3>
       <div class="btn-row">
@@ -198,19 +189,13 @@
     </div>
   </div>
 
-  <!-- ======= WEEKLY PAGE ======= -->
+  <!-- WEEKLY PAGE -->
   <div class="page" id="page-weekly">
     <div class="card">
       <h3>📆 Weekly Summary — <span id="weekRange"></span></h3>
       <div class="chart-grid" style="margin-top:12px;">
-        <div class="chart-box">
-          <h4>📊 Completion Rate by Team</h4>
-          <div class="chart-wrap"><canvas id="weeklyBar"></canvas></div>
-        </div>
-        <div class="chart-box">
-          <h4>📈 Daily Trend This Week</h4>
-          <div class="chart-wrap"><canvas id="weeklyLine"></canvas></div>
-        </div>
+        <div class="chart-box"><h4>📊 Completion Rate by Team</h4><div class="chart-wrap"><canvas id="weeklyBar"></canvas></div></div>
+        <div class="chart-box"><h4>📈 Daily Trend This Week</h4><div class="chart-wrap"><canvas id="weeklyLine"></canvas></div></div>
       </div>
     </div>
     <div class="card">
@@ -219,19 +204,13 @@
     </div>
   </div>
 
-  <!-- ======= MONTHLY PAGE ======= -->
+  <!-- MONTHLY PAGE -->
   <div class="page" id="page-monthly">
     <div class="card">
       <h3>📊 Monthly Summary — <span id="monthName"></span></h3>
       <div class="chart-grid" style="margin-top:12px;">
-        <div class="chart-box">
-          <h4>📊 Tasks per Team This Month</h4>
-          <div class="chart-wrap"><canvas id="monthlyBar"></canvas></div>
-        </div>
-        <div class="chart-box">
-          <h4>📊 Completion % by Team</h4>
-          <div class="chart-wrap"><canvas id="monthlyDonut"></canvas></div>
-        </div>
+        <div class="chart-box"><h4>📊 Tasks per Team This Month</h4><div class="chart-wrap"><canvas id="monthlyBar"></canvas></div></div>
+        <div class="chart-box"><h4>📊 Completion % by Team</h4><div class="chart-wrap"><canvas id="monthlyDonut"></canvas></div></div>
       </div>
     </div>
     <div class="card">
@@ -240,31 +219,30 @@
       <div class="overflow"><div id="monthlyTableWrap"><div class="empty">Loading...</div></div></div>
     </div>
   </div>
-
-</div><!-- end adminDash -->
+</div>
 
 <script>
-var API_URL = "https://script.google.com/macros/s/AKfycbwnwVevoe-RynSCve698YF00qNMG8jCAEbKr4_JMIiuN3Vnjo8nY432-_ND5LoGHc5m/exec"; // ← Replace this
+var API_URL = "YOUR_APPS_SCRIPT_URL"; // ← Replace this
 
 var currentEmail = "", currentPassword = "", currentName = "", currentRole = "", currentTeam = "";
 var dailyData = {}, weeklyData = {}, monthlyData = {};
 var activeDailyTeam = "", activeMonthlyTeam = "";
 var charts = {};
+var myTasks = [];
+var selectedRowIndex = null;
 
-function showMsg(id, text, type) {
-  document.getElementById(id).innerHTML = text ? '<div class="msg ' + type + '">' + text + '</div>' : '';
-}
-function setBtn(id, loading, text) {
-  var b = document.getElementById(id);
-  b.disabled = loading;
-  b.innerHTML = loading ? '<span class="spinner"></span>Please wait...' : text;
-}
-async function callAPI(body, retries) {
-  retries = retries || 3; // auto retry 3 times
-  for (var attempt = 1; attempt <= retries; attempt++) {
+// ============================================================
+// CORE API — with auto retry + long timeout for cold start
+// ============================================================
+async function callAPI(body, maxRetries) {
+  maxRetries = maxRetries || 4;
+  var delays = [2000, 4000, 6000, 8000]; // increasing delays between retries
+
+  for (var attempt = 0; attempt < maxRetries; attempt++) {
     try {
       var controller = new AbortController();
-      var timeout = setTimeout(function() { controller.abort(); }, 15000); // 15 sec timeout
+      // 30 second timeout — handles Google cold start
+      var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
 
       var res = await fetch(API_URL, {
         method: "POST",
@@ -274,74 +252,115 @@ async function callAPI(body, retries) {
         signal: controller.signal
       });
 
-      clearTimeout(timeout);
+      clearTimeout(timeoutId);
 
       var text = await res.text();
 
-      // Find JSON in response — sometimes Google wraps it
+      // Extract JSON — Google sometimes wraps response
       var jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON in response");
+      if (!jsonMatch) throw new Error("Invalid response");
 
-      return JSON.parse(jsonMatch[0]);
+      var parsed = JSON.parse(jsonMatch[0]);
+      return parsed; // SUCCESS — return immediately
 
     } catch(err) {
-      console.warn("Attempt " + attempt + " failed:", err.message);
-      if (attempt === retries) {
-        return { error: "❌ Connection error. Please check your internet and try again." };
+      console.warn("Attempt " + (attempt+1) + " failed:", err.message);
+
+      if (attempt < maxRetries - 1) {
+        // Wait before retrying
+        await new Promise(function(r) { setTimeout(r, delays[attempt]); });
+      } else {
+        // All retries failed
+        return { error: "CONNECTION_FAILED" };
       }
-      // Wait 1 second before retrying
-      await new Promise(function(r) { setTimeout(r, 1000); });
     }
   }
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function showMsg(id, text, type) {
+  document.getElementById(id).innerHTML = text ? '<div class="msg ' + type + '">' + text + '</div>' : '';
+}
+function setBtn(id, loading, text) {
+  var b = document.getElementById(id);
+  if (!b) return;
+  b.disabled = loading;
+  b.innerHTML = loading ? '<span class="spinner"></span>Please wait...' : text;
 }
 function destroyChart(id) {
   if (charts[id]) { charts[id].destroy(); delete charts[id]; }
 }
 
-// ---- LOGIN ----
+// Show loading with dots animation
+function showLoading(id, message) {
+  message = message || "Loading";
+  document.getElementById(id).innerHTML =
+    '<div class="empty"><span class="spinner spinner-blue"></span> <span class="loading-dots">' + message + '</span></div>';
+}
+
+// Show error with retry button
+function showError(id, retryFn) {
+  document.getElementById(id).innerHTML =
+    '<div class="empty" style="color:#d32f2f;">' +
+    '⚠️ Could not load data.<br>' +
+    '<small style="color:#aaa;display:block;margin:6px 0;">Google server is slow to respond. Please try again.</small>' +
+    '<button class="retry-btn" onclick="' + retryFn + '()">🔄 Try Again</button>' +
+    '</div>';
+}
+
+// ============================================================
+// LOGIN
+// ============================================================
 async function doLogin() {
   var email = document.getElementById("loginEmail").value.trim();
   var pass = document.getElementById("loginPass").value.trim();
   if (!email || !pass) { showMsg("loginMsg", "Please enter email and password.", "error"); return; }
   setBtn("loginBtn", true, "Login →");
-  try {
-    var result = await callAPI({ action: "login", email: email, password: pass });
-    if (result.error) { showMsg("loginMsg", result.error, "error"); }
-    else {
-      currentEmail = email.toLowerCase().trim();
-      currentPassword = pass;
-      currentName = result.name;
-      currentRole = result.role;
-      currentTeam = result.team || "";
-      // Save session to localStorage
-      localStorage.setItem("session", JSON.stringify({
-        email: currentEmail,
-        password: currentPassword,
-        name: currentName,
-        role: currentRole,
-        team: currentTeam
-      }));
-      document.getElementById("loginWrap").style.display = "none";
-      if (currentRole === "admin") {
-        document.getElementById("adminName").innerText = currentName;
-        document.getElementById("adminEmail").innerText = currentEmail;
-        document.getElementById("adminDash").style.display = "block";
-        loadDaily();
-      } else {
-        document.getElementById("memberName").innerText = currentName;
-        document.getElementById("memberEmail").innerText = currentEmail;
-        document.getElementById("memberTeamBadge").innerText = currentTeam;
-        document.getElementById("memberDash").style.display = "block";
-        loadMemberSheet();
-      }
+  showMsg("loginMsg", "", "");
+
+  var result = await callAPI({ action: "login", email: email, password: pass });
+
+  if (!result || result.error === "CONNECTION_FAILED") {
+    showMsg("loginMsg", "❌ Cannot connect. Please check your internet and try again.", "error");
+  } else if (result.error) {
+    showMsg("loginMsg", result.error, "error");
+  } else {
+    currentEmail = email.toLowerCase().trim();
+    currentPassword = pass;
+    currentName = result.name;
+    currentRole = result.role;
+    currentTeam = result.team || "";
+
+    // Save session
+    localStorage.setItem("session", JSON.stringify({
+      email: currentEmail, password: currentPassword,
+      name: currentName, role: currentRole, team: currentTeam
+    }));
+
+    document.getElementById("loginWrap").style.display = "none";
+    if (currentRole === "admin") {
+      document.getElementById("adminName").innerText = currentName;
+      document.getElementById("adminEmail").innerText = currentEmail;
+      document.getElementById("adminDash").style.display = "block";
+      loadDaily();
+    } else {
+      document.getElementById("memberName").innerText = currentName;
+      document.getElementById("memberEmail").innerText = currentEmail;
+      document.getElementById("memberTeamBadge").innerText = currentTeam;
+      document.getElementById("memberDash").style.display = "block";
+      loadMemberSheet();
     }
-  } catch(err) { showMsg("loginMsg", "❌ Could not connect. Try again.", "error"); }
+  }
   setBtn("loginBtn", false, "Login →");
 }
 
 function doLogout() {
   localStorage.removeItem("session");
   currentEmail = ""; currentPassword = ""; currentName = ""; currentRole = ""; currentTeam = "";
+  dailyData = {}; weeklyData = {}; monthlyData = {};
+  activeDailyTeam = ""; activeMonthlyTeam = "";
   document.getElementById("loginEmail").value = "";
   document.getElementById("loginPass").value = "";
   document.getElementById("memberDash").style.display = "none";
@@ -349,7 +368,9 @@ function doLogout() {
   document.getElementById("loginWrap").style.display = "flex";
 }
 
-// ---- PAGE SWITCH ----
+// ============================================================
+// PAGE SWITCH
+// ============================================================
 function switchPage(page, el) {
   document.querySelectorAll(".page").forEach(function(p) { p.classList.remove("active"); });
   document.querySelectorAll(".nav-tab").forEach(function(t) { t.classList.remove("active"); });
@@ -359,75 +380,83 @@ function switchPage(page, el) {
   if (page === "monthly" && Object.keys(monthlyData).length === 0) loadMonthly();
 }
 
-// ---- MEMBER ----
-var myTasks = []; // stores all tasks for current member today
-var selectedRowIndex = null;
-
+// ============================================================
+// MEMBER — load my task (separate from team table)
+// ============================================================
 async function loadMemberSheet() {
-  document.getElementById("memberTableWrap").innerHTML = '<div class="empty">Loading...</div>';
+  showLoading("myTask", "Finding your task");
   document.getElementById("myTask").innerText = "Loading...";
-  try {
-    var result = await callAPI({ action: "getSheet", email: currentEmail, password: currentPassword });
-    if (result.error) {
-      document.getElementById("memberTableWrap").innerHTML = '<div class="empty">' + result.error + '</div>';
-      return;
-    }
+  showLoading("memberTableWrap", "Loading team data");
 
-    // Find all rows belonging to current member
-    myTasks = result.rows.filter(function(r) { return r.name === currentName; });
+  var result = await callAPI({ action: "getSheet", email: currentEmail, password: currentPassword });
 
-    if (myTasks.length === 0) {
-      document.getElementById("myTask").innerText = "No task assigned today";
-      document.getElementById("taskSelectorWrap").style.display = "none";
-    } else if (myTasks.length === 1) {
-      // Single task — show directly
-      document.getElementById("taskSelectorWrap").style.display = "none";
-      document.getElementById("myTask").innerText = myTasks[0].task || "No task assigned";
-      selectedRowIndex = myTasks[0].rowIndex;
-      if (myTasks[0].status) document.getElementById("statusInput").value = myTasks[0].status;
-      if (myTasks[0].summary) document.getElementById("summaryInput").value = myTasks[0].summary;
-    } else {
-      // Multiple tasks — show dropdown
-      document.getElementById("taskSelectorWrap").style.display = "block";
-      var selector = document.getElementById("taskSelector");
-      selector.innerHTML = '<option value="">-- Select a task --</option>';
-      myTasks.forEach(function(t, idx) {
-        var opt = document.createElement("option");
-        opt.value = idx;
-        opt.text = "Task " + (idx + 1) + ": " + (t.task || "No task");
-        selector.appendChild(opt);
-      });
-      // Show first task by default
-      selector.value = "0";
-      onTaskSelect();
-    }
+  if (!result || result.error === "CONNECTION_FAILED") {
+    document.getElementById("myTask").innerText = "Could not load";
+    showError("memberTableWrap", "loadMemberSheet");
+    return;
+  }
+  if (result.error) {
+    document.getElementById("myTask").innerText = result.error;
+    document.getElementById("memberTableWrap").innerHTML = '<div class="empty">' + result.error + '</div>';
+    return;
+  }
 
-    document.getElementById("memberTableWrap").innerHTML = buildTable(result.rows, currentName, false, "");
+  // Process my tasks
+  myTasks = result.rows.filter(function(r) { return r.name === currentName; });
 
-    // Browser notification
-    if (myTasks.length > 0 && myTasks[0].task) {
-      if (Notification.permission === "granted") {
-        new Notification("📋 Your Task Today", {
-          body: myTasks.length > 1 ? "You have " + myTasks.length + " tasks today!" : myTasks[0].task,
-          icon: "https://www.gstatic.com/images/branding/product/1x/sheets_2020q4_48dp.png"
-        });
-      } else if (Notification.permission !== "denied") {
-        Notification.requestPermission().then(function(perm) {
-          if (perm === "granted") {
-            new Notification("📋 Your Task Today", {
-              body: myTasks.length > 1 ? "You have " + myTasks.length + " tasks today!" : myTasks[0].task,
-              icon: "https://www.gstatic.com/images/branding/product/1x/sheets_2020q4_48dp.png"
-            });
-          }
-        });
-      }
-    }
+  if (myTasks.length === 0) {
+    document.getElementById("myTask").innerText = "No task assigned today";
+    document.getElementById("taskSelectorWrap").style.display = "none";
+    selectedRowIndex = null;
+  } else if (myTasks.length === 1) {
+    document.getElementById("taskSelectorWrap").style.display = "none";
+    document.getElementById("myTask").innerText = myTasks[0].task || "No task text";
+    selectedRowIndex = myTasks[0].rowIndex;
+    if (myTasks[0].status) document.getElementById("statusInput").value = myTasks[0].status;
+    if (myTasks[0].summary) document.getElementById("summaryInput").value = myTasks[0].summary;
+  } else {
+    document.getElementById("taskSelectorWrap").style.display = "block";
+    var sel = document.getElementById("taskSelector");
+    sel.innerHTML = '<option value="">-- Select a task --</option>';
+    myTasks.forEach(function(t, idx) {
+      var opt = document.createElement("option");
+      opt.value = idx;
+      opt.text = "Task " + (idx+1) + ": " + (t.task || "No task");
+      sel.appendChild(opt);
+    });
+    sel.value = "0";
+    onTaskSelect();
+  }
 
-  } catch(err) {
-    document.getElementById("memberTableWrap").innerHTML =
-      '<div class="empty">❌ Connection error.<br><br>' +
-      '<button onclick="loadMemberSheet()" style="width:auto;padding:8px 20px;font-size:13px;border-radius:8px;background:#1a73e8;color:white;border:none;cursor:pointer;">🔄 Try Again</button>' +
-      '</div>';
+  // Show team table
+  document.getElementById("memberTableWrap").innerHTML = buildTable(result.rows, currentName, false, "");
+
+  // Browser notification
+  if (myTasks.length > 0 && myTasks[0].task) {
+    sendBrowserNotification(myTasks.length > 1 ? "You have " + myTasks.length + " tasks today!" : myTasks[0].task);
+  }
+}
+
+// Load ONLY team table — used by refresh button
+async function loadTeamTable() {
+  showLoading("memberTableWrap", "Loading team data");
+  var result = await callAPI({ action: "getSheet", email: currentEmail, password: currentPassword });
+  if (!result || result.error === "CONNECTION_FAILED") {
+    showError("memberTableWrap", "loadTeamTable");
+    return;
+  }
+  if (result.error) {
+    document.getElementById("memberTableWrap").innerHTML = '<div class="empty">' + result.error + '</div>';
+    return;
+  }
+  document.getElementById("memberTableWrap").innerHTML = buildTable(result.rows, currentName, false, "");
+
+  // Also update my task in case admin assigned something new
+  var newMyTasks = result.rows.filter(function(r) { return r.name === currentName; });
+  if (newMyTasks.length > 0 && newMyTasks[0].task !== document.getElementById("myTask").innerText) {
+    myTasks = newMyTasks;
+    document.getElementById("myTask").innerText = myTasks[0].task || "No task text";
+    selectedRowIndex = myTasks[0].rowIndex;
   }
 }
 
@@ -437,11 +466,28 @@ function onTaskSelect() {
   var task = myTasks[parseInt(idx)];
   document.getElementById("myTask").innerText = task.task || "No task assigned";
   selectedRowIndex = task.rowIndex;
-  // Load existing status/summary for this task
   document.getElementById("statusInput").value = task.status || "";
   document.getElementById("summaryInput").value = task.summary || "";
 }
 
+function sendBrowserNotification(message) {
+  if (Notification.permission === "granted") {
+    new Notification("📋 Your Task Today", {
+      body: message,
+      icon: "https://www.gstatic.com/images/branding/product/1x/sheets_2020q4_48dp.png"
+    });
+  } else if (Notification.permission !== "denied") {
+    Notification.requestPermission().then(function(perm) {
+      if (perm === "granted") {
+        new Notification("📋 Your Task Today", { body: message });
+      }
+    });
+  }
+}
+
+// ============================================================
+// SUBMIT
+// ============================================================
 async function doSubmit() {
   var status = document.getElementById("statusInput").value;
   var summary = document.getElementById("summaryInput").value.trim();
@@ -450,304 +496,285 @@ async function doSubmit() {
   if (!selectedRowIndex) { showMsg("submitMsg", "Please select a task first.", "error"); return; }
 
   setBtn("submitBtn", true, "Submit Update ✓");
-  try {
-    var result = await callAPI({
-      action: "submit",
-      email: currentEmail,
-      password: currentPassword,
-      status: status,
-      summary: summary,
-      rowIndex: selectedRowIndex  // ← send exact row to update
-    });
-    if (result.error) showMsg("submitMsg", result.error, result.error.includes("⚠️") ? "warning" : "error");
-    else { showMsg("submitMsg", result.success, "success"); loadMemberSheet(); }
-  } catch(err) { showMsg("submitMsg", "❌ Connection error.", "error"); }
+  showMsg("submitMsg", "", "");
+
+  var result = await callAPI({
+    action: "submit", email: currentEmail, password: currentPassword,
+    status: status, summary: summary, rowIndex: selectedRowIndex
+  });
+
+  if (!result || result.error === "CONNECTION_FAILED") {
+    showMsg("submitMsg", "❌ Connection failed. Please try again.", "error");
+  } else if (result.error) {
+    showMsg("submitMsg", result.error, result.error.includes("⚠️") ? "warning" : "error");
+  } else {
+    showMsg("submitMsg", result.success, "success");
+    loadTeamTable();
+  }
   setBtn("submitBtn", false, "Submit Update ✓");
 }
 
-// ---- DAILY ----
+// ============================================================
+// ADMIN — DAILY
+// ============================================================
 async function loadDaily() {
-  document.getElementById("dailyStats").innerHTML = '<div class="empty">Loading...</div>';
-  try {
-    var result = await callAPI({ action: "adminGetAll", email: currentEmail, password: currentPassword });
-    if (result.error) return;
-    dailyData = result;
-    var s = result.stats;
-    document.getElementById("todayDate").innerText = result.today;
-    document.getElementById("dailyStats").innerHTML =
-      statBox(s.total, "Total Tasks", "") +
-      statBox(s.submitted, "Submitted", "purple") +
-      statBox(s.completed, "Completed", "green") +
-      statBox(s.stuck, "Stuck", "red") +
-      statBox(s.pending, "Pending", "orange");
+  showLoading("dailyStats", "Loading stats");
+  document.getElementById("attendanceWrap").innerHTML = '<div class="empty">Loading...</div>';
 
-    // Attendance
-    var attHtml = '';
-    var teams = Object.keys(result.allTeams);
-    teams.forEach(function(team) {
-      attHtml += '<div class="section-title">' + team + '</div><div class="attendance-grid">';
-      result.allTeams[team].forEach(function(r) {
-        var submitted = r.status !== "";
-        attHtml += '<div class="att-card ' + (submitted ? 'submitted' : 'pending') + '">';
-        attHtml += '<div class="att-name">' + r.name + '</div>';
-        attHtml += '<div class="att-status">' + (submitted ? '✅ ' + r.status : '⏳ Pending') + '</div>';
-        attHtml += '</div>';
-      });
+  var result = await callAPI({ action: "adminGetAll", email: currentEmail, password: currentPassword });
+
+  if (!result || result.error === "CONNECTION_FAILED") {
+    document.getElementById("dailyStats").innerHTML = '';
+    showError("attendanceWrap", "loadDaily");
+    showError("dailyTableWrap", "loadDaily");
+    return;
+  }
+  if (result.error) return;
+
+  dailyData = result;
+  var s = result.stats;
+  document.getElementById("todayDate").innerText = result.today;
+  document.getElementById("dailyStats").innerHTML =
+    statBox(s.total, "Total Tasks", "") +
+    statBox(s.submitted, "Submitted", "purple") +
+    statBox(s.completed, "Completed", "green") +
+    statBox(s.stuck, "Stuck", "red") +
+    statBox(s.pending, "Pending", "orange");
+
+  // Attendance
+  var attHtml = '';
+  var teams = Object.keys(result.allTeams);
+  teams.forEach(function(team) {
+    attHtml += '<div class="section-title">' + team + '</div><div class="attendance-grid">';
+    result.allTeams[team].forEach(function(r) {
+      var submitted = r.status !== "";
+      attHtml += '<div class="att-card ' + (submitted ? 'submitted' : 'pending') + '">';
+      attHtml += '<div class="att-name">' + r.name + '</div>';
+      attHtml += '<div class="att-status">' + (submitted ? '✅ ' + r.status : '⏳ Pending') + '</div>';
       attHtml += '</div>';
     });
-    document.getElementById("attendanceWrap").innerHTML = attHtml || '<div class="empty">No data today.</div>';
+    attHtml += '</div>';
+  });
+  document.getElementById("attendanceWrap").innerHTML = attHtml || '<div class="empty">No data today.</div>';
 
-    // Donut chart
-    destroyChart("dailyDonut");
-    charts["dailyDonut"] = new Chart(document.getElementById("dailyDonut"), {
-      type: "doughnut",
-      data: {
-        labels: ["Completed", "Working on it", "Stuck", "Not Started", "Pending"],
-        datasets: [{ data: [s.completed, countStatus(result.allTeams, "Working"), s.stuck, countStatus(result.allTeams, "Not"), s.pending], backgroundColor: ["#4caf50","#ff9800","#f44336","#9e9e9e","#e0e0e0"] }]
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }
-    });
+  // Donut chart
+  destroyChart("dailyDonut");
+  charts["dailyDonut"] = new Chart(document.getElementById("dailyDonut"), {
+    type: "doughnut",
+    data: {
+      labels: ["Completed","Working on it","Stuck","Not Started","Pending"],
+      datasets: [{ data: [s.completed, countStatus(result.allTeams,"Working"), s.stuck, countStatus(result.allTeams,"Not"), s.pending], backgroundColor: ["#4caf50","#ff9800","#f44336","#9e9e9e","#e0e0e0"] }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }
+  });
 
-    // Bar chart
-    destroyChart("dailyBar");
-    charts["dailyBar"] = new Chart(document.getElementById("dailyBar"), {
-      type: "bar",
-      data: {
-        labels: teams,
-        datasets: [
-          { label: "Completed", data: teams.map(function(t) { return result.allTeams[t].filter(function(r) { return r.status === "Completed"; }).length; }), backgroundColor: "#4caf50" },
-          { label: "Stuck", data: teams.map(function(t) { return result.allTeams[t].filter(function(r) { return r.status === "Stuck"; }).length; }), backgroundColor: "#f44336" },
-          { label: "Pending", data: teams.map(function(t) { return result.allTeams[t].filter(function(r) { return !r.status; }).length; }), backgroundColor: "#e0e0e0" }
-        ]
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } } }
-    });
+  // Bar chart
+  destroyChart("dailyBar");
+  charts["dailyBar"] = new Chart(document.getElementById("dailyBar"), {
+    type: "bar",
+    data: {
+      labels: teams,
+      datasets: [
+        { label: "Completed", data: teams.map(function(t) { return result.allTeams[t].filter(function(r) { return r.status==="Completed"; }).length; }), backgroundColor: "#4caf50" },
+        { label: "Stuck", data: teams.map(function(t) { return result.allTeams[t].filter(function(r) { return r.status==="Stuck"; }).length; }), backgroundColor: "#f44336" },
+        { label: "Pending", data: teams.map(function(t) { return result.allTeams[t].filter(function(r) { return !r.status; }).length; }), backgroundColor: "#e0e0e0" }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } } }
+  });
 
-    // Team tabs
-    var tabsHtml = '';
-    teams.forEach(function(team, i) {
-      if (i === 0 && !activeDailyTeam) activeDailyTeam = team;
-      tabsHtml += '<div class="team-tab ' + (activeDailyTeam === team ? 'active' : '') + '" onclick="switchDailyTeam(\'' + team + '\')">' + team + ' (' + result.allTeams[team].length + ')</div>';
-    });
-    document.getElementById("dailyTeamTabs").innerHTML = tabsHtml;
-    showDailyTeamTable(activeDailyTeam);
-
-  } catch(err) { console.error(err); }
+  // Team tabs
+  var tabsHtml = '';
+  teams.forEach(function(team, i) {
+    if (i === 0 && !activeDailyTeam) activeDailyTeam = team;
+    tabsHtml += '<div class="team-tab ' + (activeDailyTeam===team?'active':'') + '" onclick="switchDailyTeam(\'' + team + '\')">' + team + ' (' + result.allTeams[team].length + ')</div>';
+  });
+  document.getElementById("dailyTeamTabs").innerHTML = tabsHtml;
+  showDailyTeamTable(activeDailyTeam);
 }
 
 function countStatus(allTeams, keyword) {
   var count = 0;
-  Object.values(allTeams).forEach(function(rows) {
-    rows.forEach(function(r) { if (r.status && r.status.startsWith(keyword)) count++; });
-  });
+  Object.values(allTeams).forEach(function(rows) { rows.forEach(function(r) { if (r.status && r.status.startsWith(keyword)) count++; }); });
   return count;
 }
-
 function switchDailyTeam(team) {
   activeDailyTeam = team;
-  document.querySelectorAll("#dailyTeamTabs .team-tab").forEach(function(t) {
-    t.classList.toggle("active", t.innerText.startsWith(team));
-  });
+  document.querySelectorAll("#dailyTeamTabs .team-tab").forEach(function(t) { t.classList.toggle("active", t.innerText.startsWith(team)); });
   showDailyTeamTable(team);
 }
-
 function showDailyTeamTable(team) {
   var rows = (dailyData.allTeams && dailyData.allTeams[team]) || [];
   document.getElementById("dailyTableWrap").innerHTML = buildTable(rows, "", true, team);
 }
 
-// ---- NOTIFICATIONS ----
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
 async function notifyAll() {
   var btn = document.getElementById("notifyAllBtn");
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner" style="border-color:#2e7d32;border-top-color:transparent;"></span>Sending...';
   showMsg("notifyMsg", "", "");
-  try {
-    var result = await callAPI({ action: "notifyAll", email: currentEmail, password: currentPassword });
-    showMsg("notifyMsg", result.success || result.error, result.success ? "success" : "error");
-  } catch(err) {
-    showMsg("notifyMsg", "❌ Connection error.", "error");
-  }
+  var result = await callAPI({ action: "notifyAll", email: currentEmail, password: currentPassword });
+  showMsg("notifyMsg", (result && result.success) ? result.success : (result && result.error) ? result.error : "❌ Connection error.", (result && result.success) ? "success" : "error");
   btn.disabled = false;
   btn.innerHTML = "📧 Notify All Members";
 }
 
 async function notifyMember(memberName, teamName) {
   showMsg("notifyMsg", "", "");
-  try {
-    var result = await callAPI({ action: "notifyMember", email: currentEmail, password: currentPassword, memberName: memberName, teamName: teamName });
-    showMsg("notifyMsg", result.success || result.error, result.success ? "success" : "error");
-  } catch(err) {
-    showMsg("notifyMsg", "❌ Connection error.", "error");
-  }
+  var result = await callAPI({ action: "notifyMember", email: currentEmail, password: currentPassword, memberName: memberName, teamName: teamName });
+  showMsg("notifyMsg", (result && result.success) ? result.success : (result && result.error) ? result.error : "❌ Connection error.", (result && result.success) ? "success" : "error");
 }
 
-// ---- WEEKLY ----
+// ============================================================
+// WEEKLY
+// ============================================================
 async function loadWeekly() {
-  document.getElementById("weeklyTableWrap").innerHTML = '<div class="empty">Loading...</div>';
-  try {
-    var result = await callAPI({ action: "adminWeekly", email: currentEmail, password: currentPassword });
-    if (result.error) return;
-    weeklyData = result;
-    document.getElementById("weekRange").innerText = result.weekRange.start + " – " + result.weekRange.end;
-    var teams = Object.keys(result.teamStats);
+  showLoading("weeklyTableWrap", "Loading weekly data");
+  var result = await callAPI({ action: "adminWeekly", email: currentEmail, password: currentPassword });
+  if (!result || result.error === "CONNECTION_FAILED") { showError("weeklyTableWrap", "loadWeekly"); return; }
+  if (result.error) return;
+  weeklyData = result;
+  document.getElementById("weekRange").innerText = result.weekRange.start + " – " + result.weekRange.end;
+  var teams = Object.keys(result.teamStats);
 
-    destroyChart("weeklyBar");
-    charts["weeklyBar"] = new Chart(document.getElementById("weeklyBar"), {
-      type: "bar",
-      data: {
-        labels: teams,
-        datasets: [
-          { label: "Completed", data: teams.map(function(t) { return result.teamStats[t].completed; }), backgroundColor: "#4caf50" },
-          { label: "Stuck", data: teams.map(function(t) { return result.teamStats[t].stuck; }), backgroundColor: "#f44336" },
-          { label: "Pending", data: teams.map(function(t) { return result.teamStats[t].pending; }), backgroundColor: "#e0e0e0" }
-        ]
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } } }
-    });
+  destroyChart("weeklyBar");
+  charts["weeklyBar"] = new Chart(document.getElementById("weeklyBar"), {
+    type: "bar",
+    data: { labels: teams, datasets: [
+      { label: "Completed", data: teams.map(function(t) { return result.teamStats[t].completed; }), backgroundColor: "#4caf50" },
+      { label: "Stuck", data: teams.map(function(t) { return result.teamStats[t].stuck; }), backgroundColor: "#f44336" },
+      { label: "Pending", data: teams.map(function(t) { return result.teamStats[t].pending; }), backgroundColor: "#e0e0e0" }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } } }
+  });
 
-    var allDays = {};
-    teams.forEach(function(team) {
-      Object.keys(result.weekData[team]).forEach(function(date) {
-        if (!allDays[date]) allDays[date] = { completed: 0, stuck: 0, pending: 0 };
-        allDays[date].completed += result.weekData[team][date].completed;
-        allDays[date].stuck += result.weekData[team][date].stuck;
-        allDays[date].pending += result.weekData[team][date].pending;
-      });
+  var allDays = {};
+  teams.forEach(function(team) {
+    Object.keys(result.weekData[team]).forEach(function(date) {
+      if (!allDays[date]) allDays[date] = { completed: 0, stuck: 0 };
+      allDays[date].completed += result.weekData[team][date].completed;
+      allDays[date].stuck += result.weekData[team][date].stuck;
     });
-    var sortedDays = Object.keys(allDays).sort(function(a, b) {
-      var pa = a.split("/"), pb = b.split("/");
-      return new Date(pa[2], pa[1]-1, pa[0]) - new Date(pb[2], pb[1]-1, pb[0]);
-    });
-    destroyChart("weeklyLine");
-    charts["weeklyLine"] = new Chart(document.getElementById("weeklyLine"), {
-      type: "line",
-      data: {
-        labels: sortedDays,
-        datasets: [
-          { label: "Completed", data: sortedDays.map(function(d) { return allDays[d].completed; }), borderColor: "#4caf50", backgroundColor: "rgba(76,175,80,0.1)", tension: 0.3, fill: true },
-          { label: "Stuck", data: sortedDays.map(function(d) { return allDays[d].stuck; }), borderColor: "#f44336", backgroundColor: "rgba(244,67,54,0.1)", tension: 0.3, fill: true }
-        ]
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { y: { ticks: { stepSize: 1 } } } }
-    });
+  });
+  var sortedDays = Object.keys(allDays).sort(function(a,b) { var pa=a.split("/"),pb=b.split("/"); return new Date(pa[2],pa[1]-1,pa[0])-new Date(pb[2],pb[1]-1,pb[0]); });
 
-    var html = '<table><thead><tr><th>Team</th><th>Total</th><th>Completed</th><th>Stuck</th><th>Pending</th><th>Rate</th></tr></thead><tbody>';
-    teams.forEach(function(team) {
-      var s = result.teamStats[team];
-      var rate = s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0;
-      html += '<tr><td><strong>' + team + '</strong></td><td>' + s.total + '</td>';
-      html += '<td><span class="status-badge b-Completed">' + s.completed + '</span></td>';
-      html += '<td><span class="status-badge b-Stuck">' + s.stuck + '</span></td>';
-      html += '<td>' + s.pending + '</td>';
-      html += '<td><div style="min-width:80px">' + rate + '%<div class="progress-bar"><div class="progress-fill" style="width:' + rate + '%"></div></div></div></td></tr>';
-    });
-    html += '</tbody></table>';
-    document.getElementById("weeklyTableWrap").innerHTML = html;
+  destroyChart("weeklyLine");
+  charts["weeklyLine"] = new Chart(document.getElementById("weeklyLine"), {
+    type: "line",
+    data: { labels: sortedDays, datasets: [
+      { label: "Completed", data: sortedDays.map(function(d) { return allDays[d].completed; }), borderColor: "#4caf50", backgroundColor: "rgba(76,175,80,0.1)", tension: 0.3, fill: true },
+      { label: "Stuck", data: sortedDays.map(function(d) { return allDays[d].stuck; }), borderColor: "#f44336", backgroundColor: "rgba(244,67,54,0.1)", tension: 0.3, fill: true }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { y: { ticks: { stepSize: 1 } } } }
+  });
 
-  } catch(err) { console.error(err); }
+  var html = '<table><thead><tr><th>Team</th><th>Total</th><th>Completed</th><th>Stuck</th><th>Pending</th><th>Rate</th></tr></thead><tbody>';
+  teams.forEach(function(team) {
+    var s = result.teamStats[team];
+    var rate = s.total > 0 ? Math.round((s.completed/s.total)*100) : 0;
+    html += '<tr><td><strong>' + team + '</strong></td><td>' + s.total + '</td>';
+    html += '<td><span class="status-badge b-Completed">' + s.completed + '</span></td>';
+    html += '<td><span class="status-badge b-Stuck">' + s.stuck + '</span></td>';
+    html += '<td>' + s.pending + '</td>';
+    html += '<td><div style="min-width:80px">' + rate + '%<div class="progress-bar"><div class="progress-fill" style="width:' + rate + '%"></div></div></div></td></tr>';
+  });
+  document.getElementById("weeklyTableWrap").innerHTML = html + '</tbody></table>';
 }
 
-// ---- MONTHLY ----
+// ============================================================
+// MONTHLY
+// ============================================================
 async function loadMonthly() {
-  document.getElementById("monthlyTableWrap").innerHTML = '<div class="empty">Loading...</div>';
-  try {
-    var result = await callAPI({ action: "adminMonthly", email: currentEmail, password: currentPassword });
-    if (result.error) return;
-    monthlyData = result;
-    document.getElementById("monthName").innerText = result.monthName;
-    var teams = Object.keys(result.monthData);
+  showLoading("monthlyTableWrap", "Loading monthly data");
+  var result = await callAPI({ action: "adminMonthly", email: currentEmail, password: currentPassword });
+  if (!result || result.error === "CONNECTION_FAILED") { showError("monthlyTableWrap", "loadMonthly"); return; }
+  if (result.error) return;
+  monthlyData = result;
+  document.getElementById("monthName").innerText = result.monthName;
+  var teams = Object.keys(result.monthData);
 
-    destroyChart("monthlyBar");
-    charts["monthlyBar"] = new Chart(document.getElementById("monthlyBar"), {
-      type: "bar",
-      data: {
-        labels: teams,
-        datasets: [
-          { label: "Completed", data: teams.map(function(t) { return result.monthData[t].completed; }), backgroundColor: "#4caf50" },
-          { label: "Stuck", data: teams.map(function(t) { return result.monthData[t].stuck; }), backgroundColor: "#f44336" },
-          { label: "Pending", data: teams.map(function(t) { return result.monthData[t].pending; }), backgroundColor: "#e0e0e0" }
-        ]
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } } }
-    });
+  destroyChart("monthlyBar");
+  charts["monthlyBar"] = new Chart(document.getElementById("monthlyBar"), {
+    type: "bar",
+    data: { labels: teams, datasets: [
+      { label: "Completed", data: teams.map(function(t) { return result.monthData[t].completed; }), backgroundColor: "#4caf50" },
+      { label: "Stuck", data: teams.map(function(t) { return result.monthData[t].stuck; }), backgroundColor: "#f44336" },
+      { label: "Pending", data: teams.map(function(t) { return result.monthData[t].pending; }), backgroundColor: "#e0e0e0" }
+    ]},
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } } }
+  });
 
-    destroyChart("monthlyDonut");
-    charts["monthlyDonut"] = new Chart(document.getElementById("monthlyDonut"), {
-      type: "doughnut",
-      data: {
-        labels: teams,
-        datasets: [{ data: teams.map(function(t) { var s = result.monthData[t]; return s.total > 0 ? Math.round((s.completed/s.total)*100) : 0; }), backgroundColor: ["#1a73e8","#4caf50","#ff9800","#f44336","#9c27b0"] }]
-      },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } }, tooltip: { callbacks: { label: function(c) { return c.label + ': ' + c.raw + '%'; } } } } }
-    });
+  destroyChart("monthlyDonut");
+  charts["monthlyDonut"] = new Chart(document.getElementById("monthlyDonut"), {
+    type: "doughnut",
+    data: { labels: teams, datasets: [{ data: teams.map(function(t) { var s=result.monthData[t]; return s.total>0?Math.round((s.completed/s.total)*100):0; }), backgroundColor: ["#1a73e8","#4caf50","#ff9800","#f44336","#9c27b0"] }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } }, tooltip: { callbacks: { label: function(c) { return c.label+': '+c.raw+'%'; } } } } }
+  });
 
-    var tabsHtml = '';
-    teams.forEach(function(team, i) {
-      if (i === 0 && !activeMonthlyTeam) activeMonthlyTeam = team;
-      tabsHtml += '<div class="team-tab ' + (activeMonthlyTeam === team ? 'active' : '') + '" onclick="switchMonthlyTeam(\'' + team + '\')">' + team + '</div>';
-    });
-    document.getElementById("monthlyTeamTabs").innerHTML = tabsHtml;
-    showMonthlyTable(activeMonthlyTeam);
-
-  } catch(err) { console.error(err); }
+  var tabsHtml = '';
+  teams.forEach(function(team, i) {
+    if (i===0 && !activeMonthlyTeam) activeMonthlyTeam = team;
+    tabsHtml += '<div class="team-tab ' + (activeMonthlyTeam===team?'active':'') + '" onclick="switchMonthlyTeam(\'' + team + '\')">' + team + '</div>';
+  });
+  document.getElementById("monthlyTeamTabs").innerHTML = tabsHtml;
+  showMonthlyTable(activeMonthlyTeam);
 }
 
 function switchMonthlyTeam(team) {
   activeMonthlyTeam = team;
-  document.querySelectorAll("#monthlyTeamTabs .team-tab").forEach(function(t) {
-    t.classList.toggle("active", t.innerText === team);
-  });
+  document.querySelectorAll("#monthlyTeamTabs .team-tab").forEach(function(t) { t.classList.toggle("active", t.innerText===team); });
   showMonthlyTable(team);
 }
-
 function showMonthlyTable(team) {
   var members = (monthlyData.memberStats && monthlyData.memberStats[team]) || {};
   var names = Object.keys(members);
-  if (names.length === 0) { document.getElementById("monthlyTableWrap").innerHTML = '<div class="empty">No data this month.</div>'; return; }
+  if (names.length===0) { document.getElementById("monthlyTableWrap").innerHTML='<div class="empty">No data this month.</div>'; return; }
   var html = '<table><thead><tr><th>Member</th><th>Total</th><th>Completed</th><th>Stuck</th><th>Pending</th><th>Rate</th></tr></thead><tbody>';
   names.forEach(function(name) {
     var m = members[name];
-    var rate = m.total > 0 ? Math.round((m.completed / m.total) * 100) : 0;
-    html += '<tr><td><strong>' + name + '</strong></td><td>' + m.total + '</td>';
-    html += '<td><span class="status-badge b-Completed">' + m.completed + '</span></td>';
-    html += '<td><span class="status-badge b-Stuck">' + m.stuck + '</span></td>';
-    html += '<td>' + m.pending + '</td>';
-    html += '<td><div style="min-width:80px">' + rate + '%<div class="progress-bar"><div class="progress-fill" style="width:' + rate + '%;background:' + (rate>=70?"#4caf50":rate>=40?"#ff9800":"#f44336") + '"></div></div></div></td></tr>';
+    var rate = m.total>0?Math.round((m.completed/m.total)*100):0;
+    html += '<tr><td><strong>'+name+'</strong></td><td>'+m.total+'</td>';
+    html += '<td><span class="status-badge b-Completed">'+m.completed+'</span></td>';
+    html += '<td><span class="status-badge b-Stuck">'+m.stuck+'</span></td>';
+    html += '<td>'+m.pending+'</td>';
+    html += '<td><div style="min-width:80px">'+rate+'%<div class="progress-bar"><div class="progress-fill" style="width:'+rate+'%;background:'+(rate>=70?"#4caf50":rate>=40?"#ff9800":"#f44336")+'"></div></div></div></td></tr>';
   });
-  html += '</tbody></table>';
-  document.getElementById("monthlyTableWrap").innerHTML = html;
+  document.getElementById("monthlyTableWrap").innerHTML = html + '</tbody></table>';
 }
 
-// ---- SHARED ----
+// ============================================================
+// SHARED
+// ============================================================
 function statBox(num, label, color) {
-  return '<div class="stat-box ' + color + '"><div class="stat-num">' + num + '</div><div class="stat-label">' + label + '</div></div>';
+  return '<div class="stat-box '+color+'"><div class="stat-num">'+num+'</div><div class="stat-label">'+label+'</div></div>';
 }
-
 function buildTable(rows, highlightName, showNotify, teamName) {
-  if (!rows || rows.length === 0) return '<div class="empty">No tasks assigned today.</div>';
-  var html = '<table><thead><tr><th>Name</th><th>Task</th><th>Status</th><th>Summary</th>' + (showNotify ? '<th>Notify</th>' : '') + '</tr></thead><tbody>';
+  if (!rows||rows.length===0) return '<div class="empty">No tasks assigned today.</div>';
+  var html = '<table><thead><tr><th>Name</th><th>Task</th><th>Status</th><th>Summary</th>'+(showNotify?'<th>Notify</th>':'')+'</tr></thead><tbody>';
   rows.forEach(function(r) {
-    var isMe = r.name === highlightName;
-    var sc = r.status ? "b-" + r.status.split(" ")[0] : "b-empty";
-    html += '<tr class="' + (isMe ? "my-row" : "") + '">';
-    html += '<td>' + r.name + (isMe ? ' <span style="font-size:10px;color:#1a73e8">(you)</span>' : '') + '</td>';
-    html += '<td>' + (r.task || '—') + '</td>';
-    html += '<td><span class="status-badge ' + sc + '">' + (r.status || '—') + '</span></td>';
-    html += '<td>' + (r.summary || '—') + '</td>';
-    if (showNotify) {
-      html += '<td><button onclick="notifyMember(\'' + r.name + '\',\'' + teamName + '\')" style="width:auto;padding:5px 12px;font-size:12px;border-radius:6px;background:#1a73e8;color:white;border:none;cursor:pointer;">📧</button></td>';
-    }
+    var isMe = r.name===highlightName;
+    var sc = r.status?"b-"+r.status.split(" ")[0]:"b-empty";
+    html += '<tr class="'+(isMe?"my-row":"")+'">';
+    html += '<td>'+r.name+(isMe?' <span style="font-size:10px;color:#1a73e8">(you)</span>':'')+'</td>';
+    html += '<td>'+(r.task||'—')+'</td>';
+    html += '<td><span class="status-badge '+sc+'">'+(r.status||'—')+'</span></td>';
+    html += '<td>'+(r.summary||'—')+'</td>';
+    if (showNotify) html += '<td><button onclick="notifyMember(\''+r.name+'\',\''+teamName+'\')" style="width:auto;padding:5px 12px;font-size:12px;border-radius:6px;background:#1a73e8;color:white;border:none;cursor:pointer;">📧</button></td>';
     html += '</tr>';
   });
-  return html + '</tbody></table>';
+  return html+'</tbody></table>';
 }
 
 document.addEventListener("keypress", function(e) {
-  if (e.key === "Enter" && document.getElementById("loginWrap").style.display !== "none") doLogin();
+  if (e.key==="Enter" && document.getElementById("loginWrap").style.display!=="none") doLogin();
 });
 
-// Auto-restore session on page load/refresh
+// ============================================================
+// AUTO RESTORE SESSION
+// ============================================================
 (function restoreSession() {
   var saved = localStorage.getItem("session");
   if (!saved) return;
@@ -779,4 +806,3 @@ document.addEventListener("keypress", function(e) {
 </script>
 </body>
 </html>
-
