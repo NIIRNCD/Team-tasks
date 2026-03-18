@@ -259,25 +259,39 @@ function setBtn(id, loading, text) {
   b.disabled = loading;
   b.innerHTML = loading ? '<span class="spinner"></span>Please wait...' : text;
 }
-async function callAPI(body) {
-  try {
-    var res = await fetch(API_URL, {
-      method: "POST",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    var text = await res.text();
+async function callAPI(body, retries) {
+  retries = retries || 3; // auto retry 3 times
+  for (var attempt = 1; attempt <= retries; attempt++) {
     try {
-      return JSON.parse(text);
-    } catch(e) {
-      console.error("Bad response:", text);
-      return { error: "❌ Server returned invalid response." };
+      var controller = new AbortController();
+      var timeout = setTimeout(function() { controller.abort(); }, 15000); // 15 sec timeout
+
+      var res = await fetch(API_URL, {
+        method: "POST",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeout);
+
+      var text = await res.text();
+
+      // Find JSON in response — sometimes Google wraps it
+      var jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error("No JSON in response");
+
+      return JSON.parse(jsonMatch[0]);
+
+    } catch(err) {
+      console.warn("Attempt " + attempt + " failed:", err.message);
+      if (attempt === retries) {
+        return { error: "❌ Connection error. Please check your internet and try again." };
+      }
+      // Wait 1 second before retrying
+      await new Promise(function(r) { setTimeout(r, 1000); });
     }
-  } catch(err) {
-    console.error("API Error:", err);
-    return { error: "❌ Connection error. Please try again." };
   }
 }
 function destroyChart(id) {
@@ -410,7 +424,10 @@ async function loadMemberSheet() {
     }
 
   } catch(err) {
-    document.getElementById("memberTableWrap").innerHTML = '<div class="empty">❌ Connection error.</div>';
+    document.getElementById("memberTableWrap").innerHTML =
+      '<div class="empty">❌ Connection error.<br><br>' +
+      '<button onclick="loadMemberSheet()" style="width:auto;padding:8px 20px;font-size:13px;border-radius:8px;background:#1a73e8;color:white;border:none;cursor:pointer;">🔄 Try Again</button>' +
+      '</div>';
   }
 }
 
