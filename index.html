@@ -250,8 +250,25 @@ function setBtn(id, loading, text) {
   b.innerHTML = loading ? '<span class="spinner"></span>Please wait...' : text;
 }
 async function callAPI(body) {
-  var res = await fetch(API_URL, { method: "POST", body: JSON.stringify(body) });
-  return await res.json();
+  try {
+    var res = await fetch(API_URL, {
+      method: "POST",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch(e) {
+      console.error("Bad response:", text);
+      return { error: "❌ Server returned invalid response." };
+    }
+  } catch(err) {
+    console.error("API Error:", err);
+    return { error: "❌ Connection error. Please try again." };
+  }
 }
 function destroyChart(id) {
   if (charts[id]) { charts[id].destroy(); delete charts[id]; }
