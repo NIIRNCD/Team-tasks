@@ -4,76 +4,90 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Project Task Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
     body { background: #f0f2f5; min-height: 100vh; padding: 16px; }
-
-    /* LOGIN */
     .login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    .login-card { background: white; border-radius: 16px; padding: 28px; width: 100%; max-width: 380px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
+    .login-card { background: white; border-radius: 16px; padding: 32px; width: 100%; max-width: 380px; box-shadow: 0 4px 24px rgba(0,0,0,0.10); }
     .login-card h2 { color: #1a73e8; margin-bottom: 4px; font-size: 22px; }
     .login-card .sub { color: #888; font-size: 13px; margin-bottom: 22px; }
-
-    /* DASHBOARD */
-    .dashboard { display: none; max-width: 900px; margin: 0 auto; }
+    .dashboard { display: none; max-width: 1000px; margin: 0 auto; }
     .dash-header { background: white; border-radius: 14px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
     .dash-header h2 { color: #1a73e8; font-size: 17px; }
     .user-info { font-size: 12px; color: #555; margin-top: 3px; }
-    .team-badge { display: inline-block; background: #e8f0fe; color: #1a73e8; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-left: 8px; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .team-badge { background: #e8f0fe; color: #1a73e8; }
     .admin-badge { background: #fce4ec; color: #c62828; }
     .logout-btn { background: none; border: 1.5px solid #ddd; color: #888; padding: 6px 14px; border-radius: 8px; cursor: pointer; font-size: 13px; }
     .logout-btn:hover { border-color: #d32f2f; color: #d32f2f; }
-
-    /* TABS (admin only) */
-    .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    .tab { padding: 8px 18px; border-radius: 8px; border: 1.5px solid #ddd; background: white; cursor: pointer; font-size: 13px; font-weight: 600; color: #555; }
-    .tab.active { background: #1a73e8; color: white; border-color: #1a73e8; }
-
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .nav-tab { padding: 9px 20px; border-radius: 10px; border: 1.5px solid #ddd; background: white; cursor: pointer; font-size: 13px; font-weight: 600; color: #555; transition: all 0.2s; }
+    .nav-tab.active { background: #1a73e8; color: white; border-color: #1a73e8; }
+    .team-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .team-tab { padding: 7px 16px; border-radius: 8px; border: 1.5px solid #ddd; background: white; cursor: pointer; font-size: 12px; font-weight: 600; color: #555; }
+    .team-tab.active { background: #1a73e8; color: white; border-color: #1a73e8; }
     .card { background: white; border-radius: 14px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
-    .card h3 { color: #333; font-size: 15px; margin-bottom: 14px; }
-
-    .my-task-box { background: #f8f9ff; border: 1.5px solid #d0d8ff; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
-    .tl { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .tv { font-size: 15px; font-weight: 700; color: #1a73e8; }
-
+    .card h3 { color: #333; font-size: 15px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .stat-box { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); text-align: center; border-top: 4px solid #1a73e8; }
+    .stat-box.green { border-top-color: #2e7d32; }
+    .stat-box.red { border-top-color: #c62828; }
+    .stat-box.orange { border-top-color: #f57f17; }
+    .stat-box.purple { border-top-color: #6a1b9a; }
+    .stat-num { font-size: 30px; font-weight: 800; color: #1a73e8; }
+    .stat-box.green .stat-num { color: #2e7d32; }
+    .stat-box.red .stat-num { color: #c62828; }
+    .stat-box.orange .stat-num { color: #f57f17; }
+    .stat-box.purple .stat-num { color: #6a1b9a; }
+    .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
+    .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 16px; }
+    .chart-box { background: white; border-radius: 14px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); }
+    .chart-box h4 { font-size: 13px; color: #555; margin-bottom: 14px; font-weight: 700; }
+    .chart-wrap { position: relative; height: 200px; }
+    .overflow { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #f8f9ff; color: #1a73e8; font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 2px solid #e8eeff; white-space: nowrap; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #fafbff; }
+    .my-row td { background: #fffde7 !important; font-weight: 600; }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .b-Completed { background: #e8f5e9; color: #2e7d32; }
+    .b-Working { background: #fff8e1; color: #f57f17; }
+    .b-Stuck { background: #fce4ec; color: #c62828; }
+    .b-Not { background: #f5f5f5; color: #757575; }
+    .b-empty { background: #f5f5f5; color: #bbb; }
+    .attendance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
+    .att-card { border-radius: 10px; padding: 12px; text-align: center; font-size: 12px; font-weight: 600; }
+    .att-card.submitted { background: #e8f5e9; color: #2e7d32; border: 1.5px solid #c8e6c9; }
+    .att-card.pending { background: #fff8e1; color: #f57f17; border: 1.5px solid #fff176; }
+    .att-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+    .att-status { font-size: 11px; }
+    .progress-bar { background: #e0e0e0; border-radius: 10px; height: 8px; overflow: hidden; margin-top: 4px; }
+    .progress-fill { height: 100%; border-radius: 10px; background: #1a73e8; transition: width 0.3s; }
     label { font-size: 13px; color: #555; font-weight: 600; display: block; margin-bottom: 5px; }
     input, select, textarea { width: 100%; padding: 11px 14px; border: 1.5px solid #ddd; border-radius: 8px; font-size: 14px; margin-bottom: 13px; outline: none; }
     input:focus, select:focus, textarea:focus { border-color: #1a73e8; }
     textarea { resize: vertical; min-height: 75px; }
     button { width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
     button:disabled { background: #aaa; }
-    .refresh-btn { background: #e8f0fe; color: #1a73e8; font-size: 13px; padding: 8px; margin-bottom: 13px; }
-
-    /* TABLE */
-    .overflow { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th { background: #f8f9ff; color: #1a73e8; font-weight: 700; padding: 10px 12px; text-align: left; border-bottom: 2px solid #e8eeff; }
-    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
-    tr:last-child td { border-bottom: none; }
-    .my-row td { background: #fffde7 !important; font-weight: 600; }
-    .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
-    .b-Completed { background: #e8f5e9; color: #2e7d32; }
-    .b-Working { background: #fff8e1; color: #f57f17; }
-    .b-Stuck { background: #fce4ec; color: #c62828; }
-    .b-Not { background: #f5f5f5; color: #757575; }
-    .b-empty { background: #f5f5f5; color: #bbb; }
-
-    /* STATS (admin) */
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
-    .stat-box { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); text-align: center; }
-    .stat-num { font-size: 28px; font-weight: 800; color: #1a73e8; }
-    .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
-    .stat-box.green .stat-num { color: #2e7d32; }
-    .stat-box.red .stat-num { color: #c62828; }
-    .stat-box.orange .stat-num { color: #f57f17; }
-
+    .refresh-btn { background: #e8f0fe; color: #1a73e8; font-size: 13px; border-radius: 8px; border: none; cursor: pointer; width: auto; padding: 8px 16px; margin-bottom: 13px; }
+    .notify-all-btn { background: #e8f5e9; color: #2e7d32; font-size: 13px; border-radius: 8px; border: none; cursor: pointer; width: auto; padding: 8px 16px; margin-bottom: 13px; }
+    .my-task-box { background: #f8f9ff; border: 1.5px solid #d0d8ff; border-radius: 10px; padding: 14px; margin-bottom: 14px; }
+    .tl { font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .tv { font-size: 15px; font-weight: 700; color: #1a73e8; }
     .msg { padding: 11px 14px; border-radius: 8px; margin-bottom: 13px; font-size: 13px; font-weight: 500; }
     .error { background: #fff0f0; color: #d32f2f; border: 1px solid #ffcdd2; }
     .success { background: #f0fff4; color: #2e7d32; border: 1px solid #c8e6c9; }
     .warning { background: #fffde7; color: #f57f17; border: 1px solid #fff176; }
     .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .empty { text-align: center; padding: 28px; color: #aaa; }
+    .empty { text-align: center; padding: 28px; color: #aaa; font-size: 14px; }
+    .section-title { font-size: 13px; font-weight: 700; color: #1a73e8; margin: 16px 0 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
   </style>
 </head>
 <body>
@@ -82,7 +96,7 @@
 <div class="login-wrap" id="loginWrap">
   <div class="login-card">
     <h2>📋 Project Task Dashboard</h2>
-    <p class="sub">Login with your email and team password</p>
+    <p class="sub">ICMR-NIIRNCD Team Management</p>
     <div id="loginMsg"></div>
     <label>Your Email</label>
     <input type="email" id="loginEmail" placeholder="yourname@gmail.com" />
@@ -96,14 +110,11 @@
 <div class="dashboard" id="memberDash">
   <div class="dash-header">
     <div>
-      <h2>📋 Project Task Dashboard
-        <span class="team-badge" id="memberTeamBadge"></span>
-      </h2>
+      <h2>📋 Task Dashboard <span class="badge team-badge" id="memberTeamBadge"></span></h2>
       <div class="user-info">👤 <span id="memberName"></span> · <span id="memberEmail"></span></div>
     </div>
     <button class="logout-btn" onclick="doLogout()">Logout</button>
   </div>
-
   <div class="card">
     <h3>✏️ My Update</h3>
     <div id="submitMsg"></div>
@@ -117,14 +128,14 @@
       <option>Completed</option>
       <option>Working on it</option>
       <option>Stuck</option>
+      <option>Not Started</option>
     </select>
     <label>End of Day Summary *</label>
     <textarea id="summaryInput" placeholder="What did you do today?"></textarea>
     <button id="submitBtn" onclick="doSubmit()">Submit Update ✓</button>
   </div>
-
   <div class="card">
-    <h3>👥 My Team — Today's Status</h3>
+    <h3>👥 My Team — Today</h3>
     <button class="refresh-btn" onclick="loadMemberSheet()">🔄 Refresh</button>
     <div class="overflow"><div id="memberTableWrap"><div class="empty">Loading...</div></div></div>
   </div>
@@ -134,235 +145,501 @@
 <div class="dashboard" id="adminDash">
   <div class="dash-header">
     <div>
-      <h2>📋 Admin Dashboard
-        <span class="team-badge admin-badge">ADMIN</span>
-      </h2>
+      <h2>📋 Admin Dashboard <span class="badge admin-badge">ADMIN</span></h2>
       <div class="user-info">👤 <span id="adminName"></span> · <span id="adminEmail"></span></div>
     </div>
     <button class="logout-btn" onclick="doLogout()">Logout</button>
   </div>
 
-  <!-- Stats -->
-  <div class="stats" id="adminStats"></div>
-
-  <!-- Team Tabs -->
-  <div class="tabs" id="teamTabs"></div>
-
-  <!-- Team Table -->
-  <div class="card">
-    <h3>📊 <span id="activeTeamName"></span> — Today's Status</h3>
-    <button class="refresh-btn" onclick="loadAdminSheet()">🔄 Refresh All</button>
-    <div class="overflow"><div id="adminTableWrap"><div class="empty">Loading...</div></div></div>
+  <div class="nav-tabs">
+    <div class="nav-tab active" onclick="switchPage('daily', this)">📅 Daily</div>
+    <div class="nav-tab" onclick="switchPage('weekly', this)">📆 Weekly</div>
+    <div class="nav-tab" onclick="switchPage('monthly', this)">📊 Monthly</div>
   </div>
-</div>
+
+  <!-- ======= DAILY PAGE ======= -->
+  <div class="page active" id="page-daily">
+    <div class="stats" id="dailyStats"></div>
+
+    <div class="card">
+      <h3>🟢 Member Attendance — <span id="todayDate"></span></h3>
+      <div id="attendanceWrap"><div class="empty">Loading...</div></div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="chart-box">
+        <h4>📊 Overall Status Distribution</h4>
+        <div class="chart-wrap"><canvas id="dailyDonut"></canvas></div>
+      </div>
+      <div class="chart-box">
+        <h4>📊 Status by Team</h4>
+        <div class="chart-wrap"><canvas id="dailyBar"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📋 Team Details</h3>
+      <div class="btn-row">
+        <button class="refresh-btn" onclick="loadDaily()">🔄 Refresh</button>
+        <button class="notify-all-btn" id="notifyAllBtn" onclick="notifyAll()">📧 Notify All Members</button>
+      </div>
+      <div id="notifyMsg"></div>
+      <div class="team-tabs" id="dailyTeamTabs"></div>
+      <div class="overflow"><div id="dailyTableWrap"><div class="empty">Loading...</div></div></div>
+    </div>
+  </div>
+
+  <!-- ======= WEEKLY PAGE ======= -->
+  <div class="page" id="page-weekly">
+    <div class="card">
+      <h3>📆 Weekly Summary — <span id="weekRange"></span></h3>
+      <div class="chart-grid" style="margin-top:12px;">
+        <div class="chart-box">
+          <h4>📊 Completion Rate by Team</h4>
+          <div class="chart-wrap"><canvas id="weeklyBar"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <h4>📈 Daily Trend This Week</h4>
+          <div class="chart-wrap"><canvas id="weeklyLine"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>📋 Weekly Stats by Team</h3>
+      <div class="overflow"><div id="weeklyTableWrap"><div class="empty">Loading...</div></div></div>
+    </div>
+  </div>
+
+  <!-- ======= MONTHLY PAGE ======= -->
+  <div class="page" id="page-monthly">
+    <div class="card">
+      <h3>📊 Monthly Summary — <span id="monthName"></span></h3>
+      <div class="chart-grid" style="margin-top:12px;">
+        <div class="chart-box">
+          <h4>📊 Tasks per Team This Month</h4>
+          <div class="chart-wrap"><canvas id="monthlyBar"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <h4>📊 Completion % by Team</h4>
+          <div class="chart-wrap"><canvas id="monthlyDonut"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>👤 Member Performance This Month</h3>
+      <div class="team-tabs" id="monthlyTeamTabs"></div>
+      <div class="overflow"><div id="monthlyTableWrap"><div class="empty">Loading...</div></div></div>
+    </div>
+  </div>
+
+</div><!-- end adminDash -->
 
 <script>
-  var API_URL = "https://script.google.com/macros/s/AKfycby4jJ74rsdpXpA86EE_Td1LnF0ALDwd8TOKR6V1rvs3USxhQhB913FYkl75cc1QykI1/exec"; // ← Replace this
+var API_URL = "https://script.google.com/macros/s/AKfycbw-BzGPq4T647C7iHtYw_FMg7G7E4i3A1Uvct5rZEsZ3FfXs0OqgBDTgsYTfpXaAfqO/exec"; // ← Replace this
 
-  var currentEmail = "";
-  var currentPassword = "";
-  var currentName = "";
-  var currentRole = "";
-  var currentTeam = "";
-  var allTeamsData = {};
-  var activeTab = "";
+var currentEmail = "", currentPassword = "", currentName = "", currentRole = "", currentTeam = "";
+var dailyData = {}, weeklyData = {}, monthlyData = {};
+var activeDailyTeam = "", activeMonthlyTeam = "";
+var charts = {};
 
-  function showMsg(id, text, type) {
-    document.getElementById(id).innerHTML = text ? '<div class="msg ' + type + '">' + text + '</div>' : '';
-  }
+function showMsg(id, text, type) {
+  document.getElementById(id).innerHTML = text ? '<div class="msg ' + type + '">' + text + '</div>' : '';
+}
+function setBtn(id, loading, text) {
+  var b = document.getElementById(id);
+  b.disabled = loading;
+  b.innerHTML = loading ? '<span class="spinner"></span>Please wait...' : text;
+}
+async function callAPI(body) {
+  var res = await fetch(API_URL, { method: "POST", body: JSON.stringify(body) });
+  return await res.json();
+}
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
 
-  function setBtn(id, loading, text) {
-    var b = document.getElementById(id);
-    b.disabled = loading;
-    b.innerHTML = loading ? '<span class="spinner"></span>Please wait...' : text;
-  }
-
-  async function callAPI(body) {
-    var res = await fetch(API_URL, { method: "POST", body: JSON.stringify(body) });
-    return await res.json();
-  }
-
-  // ---- LOGIN ----
-  async function doLogin() {
-    var email = document.getElementById("loginEmail").value.trim();
-    var pass = document.getElementById("loginPass").value.trim();
-    if (!email || !pass) { showMsg("loginMsg", "Please enter email and password.", "error"); return; }
-
-    setBtn("loginBtn", true, "Login →");
-    showMsg("loginMsg", "", "");
-
-    try {
-      var result = await callAPI({ action: "login", email: email, password: pass });
-      if (result.error) {
-        showMsg("loginMsg", result.error, "error");
+// ---- LOGIN ----
+async function doLogin() {
+  var email = document.getElementById("loginEmail").value.trim();
+  var pass = document.getElementById("loginPass").value.trim();
+  if (!email || !pass) { showMsg("loginMsg", "Please enter email and password.", "error"); return; }
+  setBtn("loginBtn", true, "Login →");
+  try {
+    var result = await callAPI({ action: "login", email: email, password: pass });
+    if (result.error) { showMsg("loginMsg", result.error, "error"); }
+    else {
+      currentEmail = email.toLowerCase().trim();
+      currentPassword = pass;
+      currentName = result.name;
+      currentRole = result.role;
+      currentTeam = result.team || "";
+      document.getElementById("loginWrap").style.display = "none";
+      if (currentRole === "admin") {
+        document.getElementById("adminName").innerText = currentName;
+        document.getElementById("adminEmail").innerText = currentEmail;
+        document.getElementById("adminDash").style.display = "block";
+        loadDaily();
       } else {
-        currentEmail = email.toLowerCase().trim();
-        currentPassword = pass;
-        currentName = result.name;
-        currentRole = result.role;
-        currentTeam = result.team || "";
-        document.getElementById("loginWrap").style.display = "none";
-
-        if (currentRole === "admin") {
-          document.getElementById("adminName").innerText = currentName;
-          document.getElementById("adminEmail").innerText = currentEmail;
-          document.getElementById("adminDash").style.display = "block";
-          loadAdminSheet();
-        } else {
-          document.getElementById("memberName").innerText = currentName;
-          document.getElementById("memberEmail").innerText = currentEmail;
-          document.getElementById("memberTeamBadge").innerText = currentTeam;
-          document.getElementById("memberDash").style.display = "block";
-          loadMemberSheet();
-        }
-      }
-    } catch(err) {
-      showMsg("loginMsg", "❌ Could not connect. Try again.", "error");
-    }
-    setBtn("loginBtn", false, "Login →");
-  }
-
-  function doLogout() {
-    currentEmail = ""; currentPassword = ""; currentName = "";
-    currentRole = ""; currentTeam = ""; allTeamsData = {};
-    document.getElementById("loginEmail").value = "";
-    document.getElementById("loginPass").value = "";
-    document.getElementById("memberDash").style.display = "none";
-    document.getElementById("adminDash").style.display = "none";
-    document.getElementById("loginWrap").style.display = "flex";
-  }
-
-  // ---- MEMBER ----
-  async function loadMemberSheet() {
-    document.getElementById("memberTableWrap").innerHTML = '<div class="empty">Loading...</div>';
-    document.getElementById("myTask").innerText = "Loading...";
-
-    try {
-      var result = await callAPI({ action: "getSheet", email: currentEmail, password: currentPassword });
-      if (result.error) {
-        document.getElementById("memberTableWrap").innerHTML = '<div class="empty">' + result.error + '</div>';
-        return;
-      }
-
-      var rows = result.rows;
-      var myRow = rows.find(function(r) { return r.name === currentName; });
-      document.getElementById("myTask").innerText = myRow ? (myRow.task || "No task assigned") : "No task assigned today";
-      if (myRow && myRow.status) document.getElementById("statusInput").value = myRow.status;
-      if (myRow && myRow.summary) document.getElementById("summaryInput").value = myRow.summary;
-
-      document.getElementById("memberTableWrap").innerHTML = buildTable(rows, currentName);
-    } catch(err) {
-      document.getElementById("memberTableWrap").innerHTML = '<div class="empty">❌ Connection error.</div>';
-    }
-  }
-
-  async function doSubmit() {
-    var status = document.getElementById("statusInput").value;
-    var summary = document.getElementById("summaryInput").value.trim();
-    if (!status) { showMsg("submitMsg", "Please select a status.", "error"); return; }
-    if (!summary) { showMsg("submitMsg", "Please write your summary.", "error"); return; }
-
-    setBtn("submitBtn", true, "Submit Update ✓");
-    showMsg("submitMsg", "", "");
-
-    try {
-      var result = await callAPI({ action: "submit", email: currentEmail, password: currentPassword, status: status, summary: summary });
-      if (result.error) {
-        showMsg("submitMsg", result.error, result.error.includes("⚠️") ? "warning" : "error");
-      } else {
-        showMsg("submitMsg", result.success, "success");
+        document.getElementById("memberName").innerText = currentName;
+        document.getElementById("memberEmail").innerText = currentEmail;
+        document.getElementById("memberTeamBadge").innerText = currentTeam;
+        document.getElementById("memberDash").style.display = "block";
         loadMemberSheet();
       }
-    } catch(err) {
-      showMsg("submitMsg", "❌ Connection error. Try again.", "error");
     }
-    setBtn("submitBtn", false, "Submit Update ✓");
-  }
+  } catch(err) { showMsg("loginMsg", "❌ Could not connect. Try again.", "error"); }
+  setBtn("loginBtn", false, "Login →");
+}
 
-  // ---- ADMIN ----
-  async function loadAdminSheet() {
-    document.getElementById("adminTableWrap").innerHTML = '<div class="empty">Loading...</div>';
-    document.getElementById("adminStats").innerHTML = '';
+function doLogout() {
+  currentEmail = ""; currentPassword = ""; currentName = ""; currentRole = ""; currentTeam = "";
+  document.getElementById("loginEmail").value = "";
+  document.getElementById("loginPass").value = "";
+  document.getElementById("memberDash").style.display = "none";
+  document.getElementById("adminDash").style.display = "none";
+  document.getElementById("loginWrap").style.display = "flex";
+}
 
-    try {
-      var result = await callAPI({ action: "adminGetAll", email: currentEmail, password: currentPassword });
-      if (result.error) {
-        document.getElementById("adminTableWrap").innerHTML = '<div class="empty">' + result.error + '</div>';
-        return;
-      }
+// ---- PAGE SWITCH ----
+function switchPage(page, el) {
+  document.querySelectorAll(".page").forEach(function(p) { p.classList.remove("active"); });
+  document.querySelectorAll(".nav-tab").forEach(function(t) { t.classList.remove("active"); });
+  document.getElementById("page-" + page).classList.add("active");
+  el.classList.add("active");
+  if (page === "weekly" && Object.keys(weeklyData).length === 0) loadWeekly();
+  if (page === "monthly" && Object.keys(monthlyData).length === 0) loadMonthly();
+}
 
-      allTeamsData = result.allTeams;
-      var teams = Object.keys(allTeamsData);
+// ---- MEMBER ----
+async function loadMemberSheet() {
+  document.getElementById("memberTableWrap").innerHTML = '<div class="empty">Loading...</div>';
+  document.getElementById("myTask").innerText = "Loading...";
+  try {
+    var result = await callAPI({ action: "getSheet", email: currentEmail, password: currentPassword });
+    if (result.error) { document.getElementById("memberTableWrap").innerHTML = '<div class="empty">' + result.error + '</div>'; return; }
+    var myRow = result.rows.find(function(r) { return r.name === currentName; });
+    document.getElementById("myTask").innerText = myRow ? (myRow.task || "No task assigned") : "No task assigned today";
+    if (myRow && myRow.status) document.getElementById("statusInput").value = myRow.status;
+    if (myRow && myRow.summary) document.getElementById("summaryInput").value = myRow.summary;
+    document.getElementById("memberTableWrap").innerHTML = buildTable(result.rows, currentName, false, "");
 
-      // Build stats
-      var totalMembers = 0, totalDone = 0, totalStuck = 0, totalPending = 0;
-      teams.forEach(function(team) {
-        allTeamsData[team].forEach(function(r) {
-          totalMembers++;
-          if (r.status === "Completed") totalDone++;
-          else if (r.status === "Stuck") totalStuck++;
-          else if (!r.status) totalPending++;
+    // ---- BROWSER NOTIFICATION ----
+    if (myRow && myRow.task) {
+      if (Notification.permission === "granted") {
+        new Notification("📋 Your Task Today", {
+          body: myRow.task,
+          icon: "https://www.gstatic.com/images/branding/product/1x/sheets_2020q4_48dp.png"
         });
-      });
-
-      document.getElementById("adminStats").innerHTML =
-        '<div class="stat-box"><div class="stat-num">' + totalMembers + '</div><div class="stat-label">Total Members</div></div>' +
-        '<div class="stat-box green"><div class="stat-num">' + totalDone + '</div><div class="stat-label">Completed</div></div>' +
-        '<div class="stat-box red"><div class="stat-num">' + totalStuck + '</div><div class="stat-label">Stuck</div></div>' +
-        '<div class="stat-box orange"><div class="stat-num">' + totalPending + '</div><div class="stat-label">Pending</div></div>';
-
-      // Build tabs
-      var tabsHtml = '';
-      teams.forEach(function(team, i) {
-        var isActive = (activeTab === team) || (i === 0 && !activeTab);
-        if (isActive) activeTab = team;
-        tabsHtml += '<div class="tab ' + (isActive ? 'active' : '') + '" onclick="switchTab(\'' + team + '\')">' + team + ' (' + allTeamsData[team].length + ')</div>';
-      });
-      document.getElementById("teamTabs").innerHTML = tabsHtml;
-
-      showTeamTable(activeTab);
-
-    } catch(err) {
-      document.getElementById("adminTableWrap").innerHTML = '<div class="empty">❌ Connection error.</div>';
+      } else if (Notification.permission !== "denied") {
+        Notification.requestPermission().then(function(perm) {
+          if (perm === "granted") {
+            new Notification("📋 Your Task Today", {
+              body: myRow.task,
+              icon: "https://www.gstatic.com/images/branding/product/1x/sheets_2020q4_48dp.png"
+            });
+          }
+        });
+      }
     }
-  }
 
-  function switchTab(team) {
-    activeTab = team;
-    // Update tab styles
-    document.querySelectorAll(".tab").forEach(function(t) {
-      t.classList.toggle("active", t.innerText.startsWith(team));
+  } catch(err) { document.getElementById("memberTableWrap").innerHTML = '<div class="empty">❌ Connection error.</div>'; }
+}
+
+async function doSubmit() {
+  var status = document.getElementById("statusInput").value;
+  var summary = document.getElementById("summaryInput").value.trim();
+  if (!status) { showMsg("submitMsg", "Please select a status.", "error"); return; }
+  if (!summary) { showMsg("submitMsg", "Please write your summary.", "error"); return; }
+  setBtn("submitBtn", true, "Submit Update ✓");
+  try {
+    var result = await callAPI({ action: "submit", email: currentEmail, password: currentPassword, status: status, summary: summary });
+    if (result.error) showMsg("submitMsg", result.error, result.error.includes("⚠️") ? "warning" : "error");
+    else { showMsg("submitMsg", result.success, "success"); loadMemberSheet(); }
+  } catch(err) { showMsg("submitMsg", "❌ Connection error.", "error"); }
+  setBtn("submitBtn", false, "Submit Update ✓");
+}
+
+// ---- DAILY ----
+async function loadDaily() {
+  document.getElementById("dailyStats").innerHTML = '<div class="empty">Loading...</div>';
+  try {
+    var result = await callAPI({ action: "adminGetAll", email: currentEmail, password: currentPassword });
+    if (result.error) return;
+    dailyData = result;
+    var s = result.stats;
+    document.getElementById("todayDate").innerText = result.today;
+    document.getElementById("dailyStats").innerHTML =
+      statBox(s.total, "Total Tasks", "") +
+      statBox(s.submitted, "Submitted", "purple") +
+      statBox(s.completed, "Completed", "green") +
+      statBox(s.stuck, "Stuck", "red") +
+      statBox(s.pending, "Pending", "orange");
+
+    // Attendance
+    var attHtml = '';
+    var teams = Object.keys(result.allTeams);
+    teams.forEach(function(team) {
+      attHtml += '<div class="section-title">' + team + '</div><div class="attendance-grid">';
+      result.allTeams[team].forEach(function(r) {
+        var submitted = r.status !== "";
+        attHtml += '<div class="att-card ' + (submitted ? 'submitted' : 'pending') + '">';
+        attHtml += '<div class="att-name">' + r.name + '</div>';
+        attHtml += '<div class="att-status">' + (submitted ? '✅ ' + r.status : '⏳ Pending') + '</div>';
+        attHtml += '</div>';
+      });
+      attHtml += '</div>';
     });
-    showTeamTable(team);
-  }
+    document.getElementById("attendanceWrap").innerHTML = attHtml || '<div class="empty">No data today.</div>';
 
-  function showTeamTable(team) {
-    document.getElementById("activeTeamName").innerText = team;
-    var rows = allTeamsData[team] || [];
-    document.getElementById("adminTableWrap").innerHTML = buildTable(rows, "");
-  }
+    // Donut chart
+    destroyChart("dailyDonut");
+    charts["dailyDonut"] = new Chart(document.getElementById("dailyDonut"), {
+      type: "doughnut",
+      data: {
+        labels: ["Completed", "Working on it", "Stuck", "Not Started", "Pending"],
+        datasets: [{ data: [s.completed, countStatus(result.allTeams, "Working"), s.stuck, countStatus(result.allTeams, "Not"), s.pending], backgroundColor: ["#4caf50","#ff9800","#f44336","#9e9e9e","#e0e0e0"] }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } } }
+    });
 
-  // ---- SHARED TABLE BUILDER ----
-  function buildTable(rows, highlightName) {
-    if (rows.length === 0) return '<div class="empty">No tasks assigned today.</div>';
-    var html = '<table><thead><tr><th>Name</th><th>Task</th><th>Status</th><th>Summary</th></tr></thead><tbody>';
-    rows.forEach(function(r) {
-      var isMe = r.name === highlightName;
-      var sc = r.status ? "b-" + r.status.split(" ")[0] : "b-empty";
-      html += '<tr class="' + (isMe ? "my-row" : "") + '">';
-      html += '<td>' + r.name + (isMe ? ' <span style="font-size:10px;color:#1a73e8">(you)</span>' : '') + '</td>';
-      html += '<td>' + (r.task || '—') + '</td>';
-      html += '<td><span class="badge ' + sc + '">' + (r.status || '—') + '</span></td>';
-      html += '<td>' + (r.summary || '—') + '</td>';
-      html += '</tr>';
+    // Bar chart
+    destroyChart("dailyBar");
+    charts["dailyBar"] = new Chart(document.getElementById("dailyBar"), {
+      type: "bar",
+      data: {
+        labels: teams,
+        datasets: [
+          { label: "Completed", data: teams.map(function(t) { return result.allTeams[t].filter(function(r) { return r.status === "Completed"; }).length; }), backgroundColor: "#4caf50" },
+          { label: "Stuck", data: teams.map(function(t) { return result.allTeams[t].filter(function(r) { return r.status === "Stuck"; }).length; }), backgroundColor: "#f44336" },
+          { label: "Pending", data: teams.map(function(t) { return result.allTeams[t].filter(function(r) { return !r.status; }).length; }), backgroundColor: "#e0e0e0" }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } } }
+    });
+
+    // Team tabs
+    var tabsHtml = '';
+    teams.forEach(function(team, i) {
+      if (i === 0 && !activeDailyTeam) activeDailyTeam = team;
+      tabsHtml += '<div class="team-tab ' + (activeDailyTeam === team ? 'active' : '') + '" onclick="switchDailyTeam(\'' + team + '\')">' + team + ' (' + result.allTeams[team].length + ')</div>';
+    });
+    document.getElementById("dailyTeamTabs").innerHTML = tabsHtml;
+    showDailyTeamTable(activeDailyTeam);
+
+  } catch(err) { console.error(err); }
+}
+
+function countStatus(allTeams, keyword) {
+  var count = 0;
+  Object.values(allTeams).forEach(function(rows) {
+    rows.forEach(function(r) { if (r.status && r.status.startsWith(keyword)) count++; });
+  });
+  return count;
+}
+
+function switchDailyTeam(team) {
+  activeDailyTeam = team;
+  document.querySelectorAll("#dailyTeamTabs .team-tab").forEach(function(t) {
+    t.classList.toggle("active", t.innerText.startsWith(team));
+  });
+  showDailyTeamTable(team);
+}
+
+function showDailyTeamTable(team) {
+  var rows = (dailyData.allTeams && dailyData.allTeams[team]) || [];
+  document.getElementById("dailyTableWrap").innerHTML = buildTable(rows, "", true, team);
+}
+
+// ---- NOTIFICATIONS ----
+async function notifyAll() {
+  var btn = document.getElementById("notifyAllBtn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="border-color:#2e7d32;border-top-color:transparent;"></span>Sending...';
+  showMsg("notifyMsg", "", "");
+  try {
+    var result = await callAPI({ action: "notifyAll", email: currentEmail, password: currentPassword });
+    showMsg("notifyMsg", result.success || result.error, result.success ? "success" : "error");
+  } catch(err) {
+    showMsg("notifyMsg", "❌ Connection error.", "error");
+  }
+  btn.disabled = false;
+  btn.innerHTML = "📧 Notify All Members";
+}
+
+async function notifyMember(memberName, teamName) {
+  showMsg("notifyMsg", "", "");
+  try {
+    var result = await callAPI({ action: "notifyMember", email: currentEmail, password: currentPassword, memberName: memberName, teamName: teamName });
+    showMsg("notifyMsg", result.success || result.error, result.success ? "success" : "error");
+  } catch(err) {
+    showMsg("notifyMsg", "❌ Connection error.", "error");
+  }
+}
+
+// ---- WEEKLY ----
+async function loadWeekly() {
+  document.getElementById("weeklyTableWrap").innerHTML = '<div class="empty">Loading...</div>';
+  try {
+    var result = await callAPI({ action: "adminWeekly", email: currentEmail, password: currentPassword });
+    if (result.error) return;
+    weeklyData = result;
+    document.getElementById("weekRange").innerText = result.weekRange.start + " – " + result.weekRange.end;
+    var teams = Object.keys(result.teamStats);
+
+    destroyChart("weeklyBar");
+    charts["weeklyBar"] = new Chart(document.getElementById("weeklyBar"), {
+      type: "bar",
+      data: {
+        labels: teams,
+        datasets: [
+          { label: "Completed", data: teams.map(function(t) { return result.teamStats[t].completed; }), backgroundColor: "#4caf50" },
+          { label: "Stuck", data: teams.map(function(t) { return result.teamStats[t].stuck; }), backgroundColor: "#f44336" },
+          { label: "Pending", data: teams.map(function(t) { return result.teamStats[t].pending; }), backgroundColor: "#e0e0e0" }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } } }
+    });
+
+    var allDays = {};
+    teams.forEach(function(team) {
+      Object.keys(result.weekData[team]).forEach(function(date) {
+        if (!allDays[date]) allDays[date] = { completed: 0, stuck: 0, pending: 0 };
+        allDays[date].completed += result.weekData[team][date].completed;
+        allDays[date].stuck += result.weekData[team][date].stuck;
+        allDays[date].pending += result.weekData[team][date].pending;
+      });
+    });
+    var sortedDays = Object.keys(allDays).sort(function(a, b) {
+      var pa = a.split("/"), pb = b.split("/");
+      return new Date(pa[2], pa[1]-1, pa[0]) - new Date(pb[2], pb[1]-1, pb[0]);
+    });
+    destroyChart("weeklyLine");
+    charts["weeklyLine"] = new Chart(document.getElementById("weeklyLine"), {
+      type: "line",
+      data: {
+        labels: sortedDays,
+        datasets: [
+          { label: "Completed", data: sortedDays.map(function(d) { return allDays[d].completed; }), borderColor: "#4caf50", backgroundColor: "rgba(76,175,80,0.1)", tension: 0.3, fill: true },
+          { label: "Stuck", data: sortedDays.map(function(d) { return allDays[d].stuck; }), borderColor: "#f44336", backgroundColor: "rgba(244,67,54,0.1)", tension: 0.3, fill: true }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { y: { ticks: { stepSize: 1 } } } }
+    });
+
+    var html = '<table><thead><tr><th>Team</th><th>Total</th><th>Completed</th><th>Stuck</th><th>Pending</th><th>Rate</th></tr></thead><tbody>';
+    teams.forEach(function(team) {
+      var s = result.teamStats[team];
+      var rate = s.total > 0 ? Math.round((s.completed / s.total) * 100) : 0;
+      html += '<tr><td><strong>' + team + '</strong></td><td>' + s.total + '</td>';
+      html += '<td><span class="status-badge b-Completed">' + s.completed + '</span></td>';
+      html += '<td><span class="status-badge b-Stuck">' + s.stuck + '</span></td>';
+      html += '<td>' + s.pending + '</td>';
+      html += '<td><div style="min-width:80px">' + rate + '%<div class="progress-bar"><div class="progress-fill" style="width:' + rate + '%"></div></div></div></td></tr>';
     });
     html += '</tbody></table>';
-    return html;
-  }
+    document.getElementById("weeklyTableWrap").innerHTML = html;
 
-  document.addEventListener("keypress", function(e) {
-    if (e.key === "Enter" && document.getElementById("loginWrap").style.display !== "none") doLogin();
+  } catch(err) { console.error(err); }
+}
+
+// ---- MONTHLY ----
+async function loadMonthly() {
+  document.getElementById("monthlyTableWrap").innerHTML = '<div class="empty">Loading...</div>';
+  try {
+    var result = await callAPI({ action: "adminMonthly", email: currentEmail, password: currentPassword });
+    if (result.error) return;
+    monthlyData = result;
+    document.getElementById("monthName").innerText = result.monthName;
+    var teams = Object.keys(result.monthData);
+
+    destroyChart("monthlyBar");
+    charts["monthlyBar"] = new Chart(document.getElementById("monthlyBar"), {
+      type: "bar",
+      data: {
+        labels: teams,
+        datasets: [
+          { label: "Completed", data: teams.map(function(t) { return result.monthData[t].completed; }), backgroundColor: "#4caf50" },
+          { label: "Stuck", data: teams.map(function(t) { return result.monthData[t].stuck; }), backgroundColor: "#f44336" },
+          { label: "Pending", data: teams.map(function(t) { return result.monthData[t].pending; }), backgroundColor: "#e0e0e0" }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } } }, scales: { x: { stacked: true }, y: { stacked: true, ticks: { stepSize: 1 } } } }
+    });
+
+    destroyChart("monthlyDonut");
+    charts["monthlyDonut"] = new Chart(document.getElementById("monthlyDonut"), {
+      type: "doughnut",
+      data: {
+        labels: teams,
+        datasets: [{ data: teams.map(function(t) { var s = result.monthData[t]; return s.total > 0 ? Math.round((s.completed/s.total)*100) : 0; }), backgroundColor: ["#1a73e8","#4caf50","#ff9800","#f44336","#9c27b0"] }]
+      },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { font: { size: 11 } } }, tooltip: { callbacks: { label: function(c) { return c.label + ': ' + c.raw + '%'; } } } } }
+    });
+
+    var tabsHtml = '';
+    teams.forEach(function(team, i) {
+      if (i === 0 && !activeMonthlyTeam) activeMonthlyTeam = team;
+      tabsHtml += '<div class="team-tab ' + (activeMonthlyTeam === team ? 'active' : '') + '" onclick="switchMonthlyTeam(\'' + team + '\')">' + team + '</div>';
+    });
+    document.getElementById("monthlyTeamTabs").innerHTML = tabsHtml;
+    showMonthlyTable(activeMonthlyTeam);
+
+  } catch(err) { console.error(err); }
+}
+
+function switchMonthlyTeam(team) {
+  activeMonthlyTeam = team;
+  document.querySelectorAll("#monthlyTeamTabs .team-tab").forEach(function(t) {
+    t.classList.toggle("active", t.innerText === team);
   });
+  showMonthlyTable(team);
+}
+
+function showMonthlyTable(team) {
+  var members = (monthlyData.memberStats && monthlyData.memberStats[team]) || {};
+  var names = Object.keys(members);
+  if (names.length === 0) { document.getElementById("monthlyTableWrap").innerHTML = '<div class="empty">No data this month.</div>'; return; }
+  var html = '<table><thead><tr><th>Member</th><th>Total</th><th>Completed</th><th>Stuck</th><th>Pending</th><th>Rate</th></tr></thead><tbody>';
+  names.forEach(function(name) {
+    var m = members[name];
+    var rate = m.total > 0 ? Math.round((m.completed / m.total) * 100) : 0;
+    html += '<tr><td><strong>' + name + '</strong></td><td>' + m.total + '</td>';
+    html += '<td><span class="status-badge b-Completed">' + m.completed + '</span></td>';
+    html += '<td><span class="status-badge b-Stuck">' + m.stuck + '</span></td>';
+    html += '<td>' + m.pending + '</td>';
+    html += '<td><div style="min-width:80px">' + rate + '%<div class="progress-bar"><div class="progress-fill" style="width:' + rate + '%;background:' + (rate>=70?"#4caf50":rate>=40?"#ff9800":"#f44336") + '"></div></div></div></td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById("monthlyTableWrap").innerHTML = html;
+}
+
+// ---- SHARED ----
+function statBox(num, label, color) {
+  return '<div class="stat-box ' + color + '"><div class="stat-num">' + num + '</div><div class="stat-label">' + label + '</div></div>';
+}
+
+function buildTable(rows, highlightName, showNotify, teamName) {
+  if (!rows || rows.length === 0) return '<div class="empty">No tasks assigned today.</div>';
+  var html = '<table><thead><tr><th>Name</th><th>Task</th><th>Status</th><th>Summary</th>' + (showNotify ? '<th>Notify</th>' : '') + '</tr></thead><tbody>';
+  rows.forEach(function(r) {
+    var isMe = r.name === highlightName;
+    var sc = r.status ? "b-" + r.status.split(" ")[0] : "b-empty";
+    html += '<tr class="' + (isMe ? "my-row" : "") + '">';
+    html += '<td>' + r.name + (isMe ? ' <span style="font-size:10px;color:#1a73e8">(you)</span>' : '') + '</td>';
+    html += '<td>' + (r.task || '—') + '</td>';
+    html += '<td><span class="status-badge ' + sc + '">' + (r.status || '—') + '</span></td>';
+    html += '<td>' + (r.summary || '—') + '</td>';
+    if (showNotify) {
+      html += '<td><button onclick="notifyMember(\'' + r.name + '\',\'' + teamName + '\')" style="width:auto;padding:5px 12px;font-size:12px;border-radius:6px;background:#1a73e8;color:white;border:none;cursor:pointer;">📧</button></td>';
+    }
+    html += '</tr>';
+  });
+  return html + '</tbody></table>';
+}
+
+document.addEventListener("keypress", function(e) {
+  if (e.key === "Enter" && document.getElementById("loginWrap").style.display !== "none") doLogin();
+});
 </script>
 </body>
 </html>
